@@ -90,7 +90,90 @@ func (g Generator) PreviewVideo(ctx context.Context, input string, videoDuration
 	return nil
 }
 
+func segmentFilter(t string, idx int, time float64, dur float64) string {
+	aset := ""
+	if t == "a" {
+		aset = "a"
+	}
+	return fmt.Sprintf("[0:%s] %strim=start=%f:duration=%f,%ssetpts=PTS-STARTPTS [%s%d];", t, aset, time, dur, aset, t, idx)
+}
+
 func (g *Generator) previewVideo(input string, videoDuration float64, options PreviewOptions, fallback bool, useVsync2 bool) generateFn {
+	return func(lockCtx *fsutil.LockContext, tmpFn string) error {
+		stepSize, offset := options.getStepSizeAndOffset(videoDuration)
+		segmentDuration := options.SegmentDuration
+		// TODO - move this out into calling function
+		// a very short duration can create files without a video stream
+		if segmentDuration < minSegmentDuration {
+			segmentDuration = minSegmentDuration
+			logger.Warnf("[generator] Segment duration (%f) too short. Using %f instead.", options.SegmentDuration, minSegmentDuration)
+		}
+
+		var args ffmpeg.Args
+
+		args = args.LogLevel(ffmpeg.LogLevelError).Overwrite()
+		args = append(args, g.FFMpegConfig.GetTranscodeInputArgs()...)
+
+		args = append(args,
+			"-i", input,
+			"-filter_complex",
+		)
+
+		var filterComplex string
+		var filterVids string
+		var filterAudios string
+		for i := 0; i < options.Segments; i++ {
+			time := offset + (float64(i) * stepSize)
+
+			vud := segmentFilter("v", i, time, segmentDuration)
+			aud := segmentFilter("a", i, time, segmentDuration)
+
+			filterComplex += vud
+			filterComplex += aud
+			filterVids += fmt.Sprintf("[v%d]", i)
+			filterAudios += fmt.Sprintf("[a%d]", i)
+		}
+		filterComplex += fmt.Sprintf("%sconcat=n=%d:v=1:a=0[outv];", filterVids, options.Segments)
+		filterComplex += fmt.Sprintf("%sconcat=n=%d:v=0:a=1[outa]", filterAudios, options.Segments)
+		args = append(args, filterComplex)
+
+		args = args.XError()
+		// https://trac.ffmpeg.org/ticket/6375
+		args = args.MaxMuxingQueueSize(1024)
+
+		args = append(args,
+			"-map", "[outv]",
+			"-c:v", "libx264",
+			"-pix_fmt", "yuv420p",
+			"-profile:v", "high",
+			"-level", "4.2",
+			"-preset", options.Preset,
+			"-crf", "21",
+			"-threads", "4",
+			"-strict", "-2",
+		)
+
+		if useVsync2 {
+			args = append(args, "-vsync", "2")
+		}
+
+		if options.Audio {
+			args = append(args,
+				"-map", "[outa]",
+			)
+			var audioArgs ffmpeg.Args
+			audioArgs = audioArgs.AudioCodec(ffmpeg.AudioCodecAAC)
+			audioArgs = audioArgs.AudioBitrate(scenePreviewAudioBitrate)
+			args = append(args, audioArgs...)
+		}
+
+		args = append(args, g.FFMpegConfig.GetTranscodeOutputArgs()...)
+
+		args = args.Output(tmpFn)
+
+		return g.generate(lockCtx, args)
+	}
+
 	// #2496 - generate a single preview video for videos shorter than segments * segment duration
 	if videoDuration < options.SegmentDuration*float64(options.Segments) {
 		return g.previewVideoSingle(input, videoDuration, options, fallback, useVsync2)
