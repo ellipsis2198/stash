@@ -5,7 +5,7 @@ import (
 )
 
 type Trim struct {
-	f SubFCFilter
+	f string
 	v bool
 }
 
@@ -30,8 +30,9 @@ func (f Trim) Args() SubFCFilter {
 		t = ""
 	}
 
-	f.f.s = fmt.Sprintf("%strim=%s", t, f.f.s)
-	return f.f
+	var filter SubFCFilter
+	filter.s = fmt.Sprintf("%strim=%s", t, f.f)
+	return filter
 }
 
 // Specify the time (in seconds) of the start of the kept section, i.e. the frame with the timestamp start will be the first frame in the output.
@@ -51,10 +52,10 @@ func (f Trim) Duration(time float64) Trim {
 
 // Append returns a Trim appending the given string.
 func (f Trim) Append(s string) Trim {
-	if f.f.s == "" {
-		f.f.s = s
+	if f.f == "" {
+		f.f = s
 	} else {
-		f.f.s = fmt.Sprintf("%s:%s", f.f.s, s)
+		f.f = fmt.Sprintf("%s:%s", f.f, s)
 	}
 	return f
 }
