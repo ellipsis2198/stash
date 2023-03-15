@@ -1,15 +1,13 @@
 package generate
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/stashapp/stash/pkg/ffmpeg"
+	"github.com/stashapp/stash/pkg/ffmpeg/filtercomplex"
 	"github.com/stashapp/stash/pkg/ffmpeg/transcoder"
 	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/logger"
@@ -90,14 +88,6 @@ func (g Generator) PreviewVideo(ctx context.Context, input string, videoDuration
 	return nil
 }
 
-func segmentFilter(t string, idx int, time float64, dur float64) string {
-	aset := ""
-	if t == "a" {
-		aset = "a"
-	}
-	return fmt.Sprintf("[0:%s] %strim=start=%f:duration=%f,%ssetpts=PTS-STARTPTS [%s%d];", t, aset, time, dur, aset, t, idx)
-}
-
 func (g *Generator) previewVideo(input string, videoDuration float64, options PreviewOptions, fallback bool, useVsync2 bool) generateFn {
 	return func(lockCtx *fsutil.LockContext, tmpFn string) error {
 		stepSize, offset := options.getStepSizeAndOffset(videoDuration)
@@ -114,35 +104,54 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 		args = args.LogLevel(ffmpeg.LogLevelError).Overwrite()
 		args = append(args, g.FFMpegConfig.GetTranscodeInputArgs()...)
 
-		args = append(args,
-			"-i", input,
-			"-filter_complex",
-		)
-
-		var filterComplex string
-		var filterVids string
-		var filterAudios string
-		for i := 0; i < options.Segments; i++ {
-			time := offset + (float64(i) * stepSize)
-
-			vud := segmentFilter("v", i, time, segmentDuration)
-			aud := segmentFilter("a", i, time, segmentDuration)
-
-			filterComplex += vud
-			filterComplex += aud
-			filterVids += fmt.Sprintf("[v%d]", i)
-			filterAudios += fmt.Sprintf("[a%d]", i)
+		if !fallback {
+			args = args.XError()
 		}
-		filterComplex += fmt.Sprintf("%sconcat=n=%d:v=1:a=0[outv];", filterVids, options.Segments)
-		filterComplex += fmt.Sprintf("%sconcat=n=%d:v=0:a=1[outa]", filterAudios, options.Segments)
-		args = append(args, filterComplex)
 
-		args = args.XError()
+		args = args.Input(input)
+
 		// https://trac.ffmpeg.org/ticket/6375
 		args = args.MaxMuxingQueueSize(1024)
 
+		var FCV filtercomplex.ComplexVideoFilter
+		VConcat := filtercomplex.NewVideoConcat().Add(options.Segments, 1).Args()
+		AConcat := filtercomplex.NewAudioConcat().Add(options.Segments, 1).Args()
+
+		for i := 0; i < options.Segments; i++ {
+			time := offset + (float64(i) * stepSize)
+
+			outv := fmt.Sprintf("v%d", i)
+			FCV = FCV.Append(filtercomplex.NewVideoTrim().
+				Start(time).
+				Duration(segmentDuration).
+				Args().
+				Setpts("PTS-STARTPTS").
+				AddInput("v", 0).
+				AddNamedOutput(outv).
+				Args())
+			VConcat = VConcat.AddNamedInput(outv)
+
+			if options.Audio {
+				outa := fmt.Sprintf("a%d", i)
+				FCV = FCV.Append(filtercomplex.NewAudioTrim().
+					Start(time).
+					Duration(segmentDuration).
+					Args().
+					AudioSetpts("PTS-STARTPTS").
+					AddInput("a", 0).
+					AddNamedOutput(outa).
+					Args())
+				AConcat = AConcat.AddNamedInput(outa)
+			}
+		}
+		FCV = FCV.Append(VConcat.AddNamedOutput("vout").Args())
+		if options.Audio {
+			FCV = FCV.Append(AConcat.AddNamedOutput("aout").Args())
+		}
+		args = append(args, FCV.Args()...)
+
 		args = append(args,
-			"-map", "[outv]",
+			"-map", "[vout]",
 			"-c:v", "libx264",
 			"-pix_fmt", "yuv420p",
 			"-profile:v", "high",
@@ -159,7 +168,7 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 
 		if options.Audio {
 			args = append(args,
-				"-map", "[outa]",
+				"-map", "[aout]",
 			)
 			var audioArgs ffmpeg.Args
 			audioArgs = audioArgs.AudioCodec(ffmpeg.AudioCodecAAC)
@@ -172,171 +181,6 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 		args = args.Output(tmpFn)
 
 		return g.generate(lockCtx, args)
-	}
-
-	// #2496 - generate a single preview video for videos shorter than segments * segment duration
-	if videoDuration < options.SegmentDuration*float64(options.Segments) {
-		return g.previewVideoSingle(input, videoDuration, options, fallback, useVsync2)
-	}
-
-	return func(lockCtx *fsutil.LockContext, tmpFn string) error {
-		// a list of tmp files used during the preview generation
-		var tmpFiles []string
-
-		// remove tmpFiles when done
-		defer func() { removeFiles(tmpFiles) }()
-
-		stepSize, offset := options.getStepSizeAndOffset(videoDuration)
-
-		segmentDuration := options.SegmentDuration
-		// TODO - move this out into calling function
-		// a very short duration can create files without a video stream
-		if segmentDuration < minSegmentDuration {
-			segmentDuration = minSegmentDuration
-			logger.Warnf("[generator] Segment duration (%f) too short. Using %f instead.", options.SegmentDuration, minSegmentDuration)
-		}
-
-		for i := 0; i < options.Segments; i++ {
-			chunkFile, err := g.tempFile(g.ScenePaths, mp4Pattern)
-			if err != nil {
-				return fmt.Errorf("generating video preview chunk file: %w", err)
-			}
-
-			tmpFiles = append(tmpFiles, chunkFile.Name())
-
-			time := offset + (float64(i) * stepSize)
-
-			chunkOptions := previewChunkOptions{
-				StartTime:  time,
-				Duration:   segmentDuration,
-				OutputPath: chunkFile.Name(),
-				Audio:      options.Audio,
-				Preset:     options.Preset,
-			}
-
-			if err := g.previewVideoChunk(lockCtx, input, chunkOptions, fallback, useVsync2); err != nil {
-				return err
-			}
-		}
-
-		// generate concat file based on generated video chunks
-		concatFilePath, err := g.generateConcatFile(tmpFiles)
-		if concatFilePath != "" {
-			tmpFiles = append(tmpFiles, concatFilePath)
-		}
-
-		if err != nil {
-			return err
-		}
-
-		return g.previewVideoChunkCombine(lockCtx, concatFilePath, tmpFn)
-	}
-}
-
-func (g *Generator) previewVideoSingle(input string, videoDuration float64, options PreviewOptions, fallback bool, useVsync2 bool) generateFn {
-	return func(lockCtx *fsutil.LockContext, tmpFn string) error {
-		chunkOptions := previewChunkOptions{
-			StartTime:  0,
-			Duration:   videoDuration,
-			OutputPath: tmpFn,
-			Audio:      options.Audio,
-			Preset:     options.Preset,
-		}
-
-		return g.previewVideoChunk(lockCtx, input, chunkOptions, fallback, useVsync2)
-	}
-}
-
-type previewChunkOptions struct {
-	StartTime  float64
-	Duration   float64
-	OutputPath string
-	Audio      bool
-	Preset     string
-}
-
-func (g Generator) previewVideoChunk(lockCtx *fsutil.LockContext, fn string, options previewChunkOptions, fallback bool, useVsync2 bool) error {
-	var videoFilter ffmpeg.VideoFilter
-	videoFilter = videoFilter.ScaleWidth(scenePreviewWidth)
-
-	var videoArgs ffmpeg.Args
-	videoArgs = videoArgs.VideoFilter(videoFilter)
-
-	videoArgs = append(videoArgs,
-		"-pix_fmt", "yuv420p",
-		"-profile:v", "high",
-		"-level", "4.2",
-		"-preset", options.Preset,
-		"-crf", "21",
-		"-threads", "4",
-		"-strict", "-2",
-	)
-
-	if useVsync2 {
-		videoArgs = append(videoArgs, "-vsync", "2")
-	}
-
-	trimOptions := transcoder.TranscodeOptions{
-		OutputPath: options.OutputPath,
-		StartTime:  options.StartTime,
-		Duration:   options.Duration,
-
-		XError:   !fallback,
-		SlowSeek: fallback,
-
-		VideoCodec: ffmpeg.VideoCodecLibX264,
-		VideoArgs:  videoArgs,
-
-		ExtraInputArgs:  g.FFMpegConfig.GetTranscodeInputArgs(),
-		ExtraOutputArgs: g.FFMpegConfig.GetTranscodeOutputArgs(),
-	}
-
-	if options.Audio {
-		var audioArgs ffmpeg.Args
-		audioArgs = audioArgs.AudioBitrate(scenePreviewAudioBitrate)
-
-		trimOptions.AudioCodec = ffmpeg.AudioCodecAAC
-		trimOptions.AudioArgs = audioArgs
-	}
-
-	args := transcoder.Transcode(fn, trimOptions)
-
-	return g.generate(lockCtx, args)
-}
-
-func (g Generator) generateConcatFile(chunkFiles []string) (fn string, err error) {
-	concatFile, err := g.ScenePaths.TempFile(txtPattern)
-	if err != nil {
-		return "", fmt.Errorf("creating concat file: %w", err)
-	}
-	defer concatFile.Close()
-
-	w := bufio.NewWriter(concatFile)
-	for _, f := range chunkFiles {
-		// files in concat file should be relative to concat
-		relFile := filepath.Base(f)
-		if _, err := w.WriteString(fmt.Sprintf("file '%s'\n", relFile)); err != nil {
-			return concatFile.Name(), fmt.Errorf("writing concat file: %w", err)
-		}
-	}
-	return concatFile.Name(), w.Flush()
-}
-
-func (g Generator) previewVideoChunkCombine(lockCtx *fsutil.LockContext, concatFilePath string, outputPath string) error {
-	spliceOptions := transcoder.SpliceOptions{
-		OutputPath: outputPath,
-	}
-
-	args := transcoder.Splice(concatFilePath, spliceOptions)
-
-	return g.generate(lockCtx, args)
-}
-
-func removeFiles(list []string) {
-	for _, f := range list {
-		if err := os.Remove(f); err != nil {
-			logger.Warnf("[generator] Delete error: %s", err)
-		}
 	}
 }
 
