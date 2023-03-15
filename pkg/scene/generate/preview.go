@@ -114,8 +114,8 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 		args = args.MaxMuxingQueueSize(1024)
 
 		var FCV filtercomplex.ComplexVideoFilter
-		VConcat := filtercomplex.NewVideoConcat().Add(options.Segments, 1).Args()
-		AConcat := filtercomplex.NewAudioConcat().Add(options.Segments, 1).Args()
+		VConcat := filtercomplex.NewConcat().Add(options.Segments, 1, true).Args()
+		AConcat := filtercomplex.NewConcat().Add(options.Segments, 1, false).Args()
 
 		for i := 0; i < options.Segments; i++ {
 			time := offset + (float64(i) * stepSize)
@@ -127,8 +127,7 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 				Args().
 				Setpts("PTS-STARTPTS").
 				AddInput("v", 0).
-				AddNamedOutput(outv).
-				Args())
+				AddNamedOutput(outv))
 			VConcat = VConcat.AddNamedInput(outv)
 
 			if options.Audio {
@@ -139,14 +138,13 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 					Args().
 					AudioSetpts("PTS-STARTPTS").
 					AddInput("a", 0).
-					AddNamedOutput(outa).
-					Args())
+					AddNamedOutput(outa))
 				AConcat = AConcat.AddNamedInput(outa)
 			}
 		}
-		FCV = FCV.Append(VConcat.AddNamedOutput("vout").Args())
+		FCV = FCV.Append(VConcat.AddNamedOutput("vout"))
 		if options.Audio {
-			FCV = FCV.Append(AConcat.AddNamedOutput("aout").Args())
+			FCV = FCV.Append(AConcat.AddNamedOutput("aout"))
 		}
 		args = append(args, FCV.Args()...)
 

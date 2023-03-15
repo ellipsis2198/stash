@@ -4,29 +4,18 @@ import (
 	"fmt"
 )
 
-type Concat struct {
-	f SubFCFilter
-	v bool
-}
+type Concat string
 
 // Creates a new video concat filter
-func NewVideoConcat() Concat {
-	var c Concat
-	c.v = true
-	return c
-}
-
-// Creates a new audio concat filter
-func NewAudioConcat() Concat {
-	var c Concat
-	c.v = false
-	return c
+func NewConcat() (s Concat) {
+	return s
 }
 
 // Returns the arguments
 func (f Concat) Args() SubFCFilter {
-	f.f.s = fmt.Sprintf("concat=%s", f.f.s)
-	return f.f
+	var filter SubFCFilter
+	filter.in = fmt.Sprintf("concat=%s", f)
+	return filter
 }
 
 // Set the number of segments. Default is 2.
@@ -45,8 +34,8 @@ func (f Concat) Audio(in int) Concat {
 }
 
 // Concats a number of inputs
-func (f Concat) Add(in int, out int) Concat {
-	if f.v {
+func (f Concat) Add(in int, out int, v bool) Concat {
+	if v {
 		return f.Segments(in).Video(out).Audio(0)
 	} else {
 		return f.Segments(in).Video(0).Audio(out)
@@ -55,10 +44,9 @@ func (f Concat) Add(in int, out int) Concat {
 
 // Append returns a Concat appending the given string.
 func (f Concat) Append(s string) Concat {
-	if f.f.s == "" {
-		f.f.s = s
-	} else {
-		f.f.s = fmt.Sprintf("%s:%s", f.f.s, s)
+	if f == "" {
+		return Concat(s)
 	}
-	return f
+
+	return Concat(fmt.Sprintf("%s:%s", f, s))
 }

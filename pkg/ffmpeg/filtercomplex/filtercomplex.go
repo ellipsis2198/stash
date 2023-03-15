@@ -75,11 +75,11 @@ func (f SubFCFilter) Append(s string) SubFCFilter {
 }
 
 // Append returns a ComplexVideoFilter appending the given string.
-func (f ComplexVideoFilter) Append(s string) ComplexVideoFilter {
+func (f ComplexVideoFilter) Append(s SubFCFilter) ComplexVideoFilter {
 	// if filter is empty, then just set
 	if f == "" {
-		return ComplexVideoFilter(s)
+		return ComplexVideoFilter(s.Args())
 	}
 
-	return ComplexVideoFilter(fmt.Sprintf("%s;%s", f, s))
+	return ComplexVideoFilter(fmt.Sprintf("%s;%s", f, s.Args()))
 }
