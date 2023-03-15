@@ -33,15 +33,6 @@ func (f Concat) Audio(in int) Concat {
 	return f.Append(fmt.Sprintf("a=%d", in))
 }
 
-// Concats a number of inputs
-func (f Concat) Add(in int, out int, v bool) Concat {
-	if v {
-		return f.Segments(in).Video(out).Audio(0)
-	} else {
-		return f.Segments(in).Video(0).Audio(out)
-	}
-}
-
 // Append returns a Concat appending the given string.
 func (f Concat) Append(s string) Concat {
 	if f == "" {

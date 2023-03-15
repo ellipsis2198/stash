@@ -114,8 +114,8 @@ func (g *Generator) previewVideo(input string, videoDuration float64, options Pr
 		args = args.MaxMuxingQueueSize(1024)
 
 		var FCV filtercomplex.ComplexVideoFilter
-		VConcat := filtercomplex.NewConcat().Add(options.Segments, 1, true).Args()
-		AConcat := filtercomplex.NewConcat().Add(options.Segments, 1, false).Args()
+		VConcat := filtercomplex.NewConcat().Segments(options.Segments).Video(1).Audio(0).Args()
+		AConcat := filtercomplex.NewConcat().Segments(options.Segments).Video(0).Audio(1).Args()
 
 		for i := 0; i < options.Segments; i++ {
 			time := offset + (float64(i) * stepSize)
