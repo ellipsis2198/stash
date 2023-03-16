@@ -50,15 +50,15 @@ func (f SubFCFilter) AddInput(t string, i int) SubFCFilter {
 	return f
 }
 
-// Append returns a SubFCFilter with a suffix in given string.
-func (f SubFCFilter) AddOutput(t string, i int) SubFCFilter {
-	f.out = fmt.Sprintf("%s[%d:%s]", f.out, i, t)
-	return f
-}
-
 // Append returns a SubFCFilter with a prefix in given string.
 func (f SubFCFilter) AddNamedInput(t string) SubFCFilter {
 	f.in = fmt.Sprintf("%s[%s]", f.in, t)
+	return f
+}
+
+// Append returns a SubFCFilter with a suffix in given string.
+func (f SubFCFilter) AddOutput(t string, i int) SubFCFilter {
+	f.out = fmt.Sprintf("%s[%d:%s]", f.out, i, t)
 	return f
 }
 

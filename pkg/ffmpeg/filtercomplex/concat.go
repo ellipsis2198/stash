@@ -12,9 +12,8 @@ func NewConcat() (s Concat) {
 }
 
 // Returns the arguments
-func (f Concat) Args() SubFCFilter {
-	var filter SubFCFilter
-	filter.in = fmt.Sprintf("concat=%s", f)
+func (f Concat) Args() (filter SubFCFilter) {
+	filter.s = fmt.Sprintf("concat=%s", f)
 	return filter
 }
 

@@ -24,13 +24,12 @@ func NewAudioTrim() Trim {
 }
 
 // Returns the arguments
-func (f Trim) Args() SubFCFilter {
+func (f Trim) Args() (filter SubFCFilter) {
 	t := "a"
 	if f.v {
 		t = ""
 	}
 
-	var filter SubFCFilter
 	filter.s = fmt.Sprintf("%strim=%s", t, f.f)
 	return filter
 }
