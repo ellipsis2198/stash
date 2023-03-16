@@ -68,9 +68,15 @@ func (f SubFCFilter) AddNamedOutput(t string) SubFCFilter {
 	return f
 }
 
-// Append returns a SubFCFilter appending the given string.
+// Append returns a SubFCFilter with the given string appended.
 func (f SubFCFilter) Append(s string) SubFCFilter {
 	f.s = fmt.Sprintf("%s,%s", f.s, s)
+	return f
+}
+
+// Append returns a SubFCFilter with the given string prepended.
+func (f SubFCFilter) Prepend(s string) SubFCFilter {
+	f.s = fmt.Sprintf("%s,%s", s, f.s)
 	return f
 }
 
