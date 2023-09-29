@@ -24,6 +24,7 @@ import (
 	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/gallery"
 	"github.com/stashapp/stash/pkg/image"
+	"github.com/stashapp/stash/pkg/imagemagick"
 	"github.com/stashapp/stash/pkg/job"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
@@ -115,6 +116,7 @@ type Manager struct {
 
 	FFMPEG        *ffmpeg.FFMpeg
 	FFProbe       ffmpeg.FFProbe
+	IMConvert     imagemagick.IMConvert
 	StreamManager *ffmpeg.StreamManager
 
 	ReadLockManager *fsutil.ReadLockManager
@@ -267,6 +269,9 @@ func initialize() error {
 	if err = initFFMPEG(ctx); err != nil {
 		logger.Warnf("could not initialize FFMPEG subsystem: %v", err)
 	}
+	if err = initImageMagick(ctx); err != nil {
+		logger.Warnf("could not initialize ImageMagick subsystem: %v", err)
+	}
 
 	instance.Scanner = makeScanner(db, instance.PluginCache)
 	instance.Cleaner = makeCleaner(db, instance.PluginCache)
@@ -310,7 +315,8 @@ func makeScanner(db *sqlite.Database, pluginCache *plugin.Cache) *file.Scanner {
 			},
 			&file.FilteredDecorator{
 				Decorator: &file_image.Decorator{
-					FFProbe: instance.FFProbe,
+					FFProbe:   instance.FFProbe,
+					IMConvert: instance.IMConvert,
 				},
 				Filter: file.FilterFunc(imageFileFilter),
 			},
@@ -391,6 +397,26 @@ func initProfiling(cpuProfilePath string) {
 	if err = pprof.StartCPUProfile(f); err != nil {
 		logger.Warnf("could not start CPU profiling: %v", err)
 	}
+}
+
+func initImageMagick(ctx context.Context) error {
+	// only do this if we have a config file set
+	if instance.Config.GetConfigFile() != "" {
+		// use same directory as config path
+		configDirectory := instance.Config.GetConfigPath()
+		paths := []string{
+			configDirectory,
+			paths.GetStashHomeDirectory(),
+		}
+		magickPath := imagemagick.GetPaths(paths)
+		if magickPath == "" {
+			logger.Infof("couldn't find ImageMagick!")
+		}
+
+		instance.IMConvert = imagemagick.IMConvert(magickPath)
+	}
+
+	return nil
 }
 
 func initFFMPEG(ctx context.Context) error {
@@ -695,6 +721,9 @@ func (s *Manager) Setup(ctx context.Context, input SetupInput) error {
 
 	if err := initFFMPEG(ctx); err != nil {
 		return fmt.Errorf("error initializing FFMPEG subsystem: %v", err)
+	}
+	if err := initImageMagick(ctx); err != nil {
+		logger.Warnf("could not initialize ImageMagick subsystem: %v", err)
 	}
 
 	instance.Scanner = makeScanner(instance.Database, instance.PluginCache)

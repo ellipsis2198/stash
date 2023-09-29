@@ -12,6 +12,7 @@ import (
 	"github.com/stashapp/stash/pkg/ffmpeg"
 	"github.com/stashapp/stash/pkg/file"
 	"github.com/stashapp/stash/pkg/file/video"
+	"github.com/stashapp/stash/pkg/imagemagick"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	_ "golang.org/x/image/webp"
@@ -19,7 +20,8 @@ import (
 
 // Decorator adds image specific fields to a File.
 type Decorator struct {
-	FFProbe ffmpeg.FFProbe
+	FFProbe   ffmpeg.FFProbe
+	IMConvert imagemagick.IMConvert
 }
 
 func (d *Decorator) Decorate(ctx context.Context, fs models.FS, f models.File) (models.File, error) {
@@ -44,17 +46,31 @@ func (d *Decorator) Decorate(ctx context.Context, fs models.FS, f models.File) (
 		}, nil
 	}
 
+	magickFallback := func() (models.File, error) {
+		c, err := d.IMConvert.NewImageFile(base.Path)
+		if err != nil {
+			logger.Warnf("File %q could not be read with ImageMagick: %s, assuming ImageFile", base.Path, err)
+			return decorateFallback()
+		}
+		return &models.ImageFile{
+			BaseFile: base,
+			Format:   c.Image.Format,
+			Width:    c.Image.Geometry.Width,
+			Height:   c.Image.Geometry.Height,
+		}, nil
+	}
+
 	// ignore clips in non-OsFS filesystems as ffprobe cannot read them
 	// TODO - copy to temp file if not an OsFS
 	if _, isOs := fs.(*file.OsFS); !isOs {
 		logger.Debugf("assuming ImageFile for non-OsFS file %q", base.Path)
-		return decorateFallback()
+		return magickFallback()
 	}
 
 	probe, err := d.FFProbe.NewVideoFile(base.Path)
 	if err != nil {
-		logger.Warnf("File %q could not be read with ffprobe: %s, assuming ImageFile", base.Path, err)
-		return decorateFallback()
+		logger.Warnf("File %q could not be read with ffprobe: %s, assuming ImageMagick compatible", base.Path, err)
+		return magickFallback()
 	}
 
 	// Fallback to catch non-animated avif images that FFProbe detects as video files
