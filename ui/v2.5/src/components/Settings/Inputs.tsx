@@ -5,9 +5,11 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Icon } from "../Shared/Icon";
 import { StringListInput } from "../Shared/StringListInput";
 import { PatchComponent } from "src/pluginApi";
+import { useSettings } from "./context";
 
 interface ISetting {
   id?: string;
+  advanced?: boolean;
   className?: string;
   subElementId?: string;
   heading?: React.ReactNode;
@@ -34,7 +36,10 @@ export const Setting: React.FC<PropsWithChildren<ISetting>> = PatchComponent(
       tooltipID,
       onClick,
       disabled,
+      advanced,
     } = props;
+
+    const { advancedMode } = useSettings();
 
     const intl = useIntl();
 
@@ -62,6 +67,8 @@ export const Setting: React.FC<PropsWithChildren<ISetting>> = PatchComponent(
       ? intl.formatMessage({ id: tooltipID })
       : undefined;
     const disabledClassName = disabled ? "disabled" : "";
+
+    if (advanced && !advancedMode) return null;
 
     return (
       <div
@@ -174,9 +181,15 @@ export const SelectSetting: React.FC<PropsWithChildren<ISelectSetting>> = ({
   value,
   children,
   onChange,
+  advanced,
 }) => {
   return (
-    <Setting headingID={headingID} subHeadingID={subHeadingID} id={id}>
+    <Setting
+      advanced={advanced}
+      headingID={headingID}
+      subHeadingID={subHeadingID}
+      id={id}
+    >
       <Form.Control
         className="input-control"
         as="select"
@@ -348,8 +361,12 @@ export const ModalSetting = <T extends {}>(props: IModalSetting<T>) => {
     buttonTextID,
     modalProps,
     disabled,
+    advanced,
   } = props;
   const [showModal, setShowModal] = useState(false);
+  const { advancedMode } = useSettings();
+
+  if (advanced && !advancedMode) return null;
 
   return (
     <>
