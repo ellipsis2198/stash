@@ -101,10 +101,6 @@ export const SettingsContext: React.FC = ({ children }) => {
   const [pendingHSP, setPendingHSP] = useState<GQL.ConfigHspInput>();
   const [updateHSPConfig] = useConfigureHSP();
 
-  const [hsp, setHSP] = useState<GQL.ConfigHspInput>({});
-  const [pendingHSP, setPendingHSP] = useState<GQL.ConfigHspInput>();
-  const [updateHSPConfig] = useConfigureHSP();
-
   const [ui, setUI] = useState<IUIConfig>({});
   const [pendingUI, setPendingUI] = useState<{}>();
   const [updateUIConfig] = useConfigureUI();
