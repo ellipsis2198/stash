@@ -146,7 +146,7 @@ export const SettingsServicesPanel: React.FC = () => {
     }
   }
 
-  function renderDeadline(until?: string) {
+  function renderDeadline(until?: string | null) {
     if (until) {
       const deadline = new Date(until);
       return `until ${intl.formatDate(deadline)}`;

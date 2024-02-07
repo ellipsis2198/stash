@@ -15,7 +15,7 @@ import {
 } from "src/core/StashService";
 import { ConfigurationContext } from "src/hooks/Config";
 import { useIntl } from "react-intl";
-import { defaultMaxOptionsShown, IUIConfig } from "src/core/config";
+import { defaultMaxOptionsShown } from "src/core/config";
 import { ListFilterModel } from "src/models/list-filter/filter";
 import {
   FilterSelectComponent,
@@ -27,6 +27,7 @@ import {
 import { useCompare } from "src/hooks/state";
 import { TagPopover } from "./TagPopover";
 import { Placement } from "react-bootstrap/esm/Overlay";
+import { sortByRelevance } from "src/utils/query";
 
 export type SelectObject = {
   id: string;
@@ -49,7 +50,7 @@ export const TagSelect: React.FC<
   const { configuration } = React.useContext(ConfigurationContext);
   const intl = useIntl();
   const maxOptionsShown =
-    (configuration?.ui as IUIConfig).maxOptionsShown ?? defaultMaxOptionsShown;
+    configuration?.ui.maxOptionsShown ?? defaultMaxOptionsShown;
   const defaultCreatable =
     !configuration?.interface.disableDropdownCreate.tag ?? true;
 
@@ -63,16 +64,16 @@ export const TagSelect: React.FC<
     filter.sortBy = "name";
     filter.sortDirection = GQL.SortDirectionEnum.Asc;
     const query = await queryFindTagsForSelect(filter);
-    return query.data.findTags.tags
-      .filter((tag) => {
-        // HACK - we should probably exclude these in the backend query, but
-        // this will do in the short-term
-        return !exclude.includes(tag.id.toString());
-      })
-      .map((tag) => ({
-        value: tag.id,
-        object: tag,
-      }));
+    let ret = query.data.findTags.tags.filter((tag) => {
+      // HACK - we should probably exclude these in the backend query, but
+      // this will do in the short-term
+      return !exclude.includes(tag.id.toString());
+    });
+
+    return sortByRelevance(input, ret, (o) => o.aliases).map((tag) => ({
+      value: tag.id,
+      object: tag,
+    }));
   }
 
   const TagOption: React.FC<OptionProps<Option, boolean>> = (optionProps) => {
