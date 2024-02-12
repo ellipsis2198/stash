@@ -431,6 +431,8 @@ export const SettingsContext: React.FC = ({ children }) => {
     });
   }
 
+  type UIConfigInput = GQL.Scalars["Map"]["input"];
+
   // saves the configuration if no further changes are made after a half second
   const saveHSPConfig = useDebounce(async (input: GQL.ConfigHspInput) => {
     try {
@@ -483,7 +485,7 @@ export const SettingsContext: React.FC = ({ children }) => {
       setUpdateSuccess(undefined);
       await updateUIConfig({
         variables: {
-          input,
+          input: input as UIConfigInput,
         },
       });
 
