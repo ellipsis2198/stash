@@ -7,7 +7,7 @@ import { Icon } from "./Icon";
 
 import "react-datepicker/dist/react-datepicker.css";
 import { useIntl } from "react-intl";
-import { PatchComponent } from "src/pluginApi";
+import { PatchComponent } from "src/patch";
 
 interface IProps {
   disabled?: boolean;
@@ -56,7 +56,7 @@ const _DateInput: React.FC<IProps> = (props: IProps) => {
           onChange={(v) => {
             props.onValueChange(v ? dateToString(v) : "");
           }}
-          customInput={React.createElement(ShowPickerButton)}
+          customInput={<ShowPickerButton onClick={() => {}} />}
           showMonthDropdown
           showYearDropdown
           scrollableMonthYearDropdown

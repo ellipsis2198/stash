@@ -28,7 +28,7 @@ import { useCompare } from "src/hooks/state";
 import { TagPopover } from "./TagPopover";
 import { Placement } from "react-bootstrap/esm/Overlay";
 import { sortByRelevance } from "src/utils/query";
-import { PatchComponent } from "src/pluginApi";
+import { PatchComponent } from "src/patch";
 
 export type SelectObject = {
   id: string;
@@ -101,7 +101,7 @@ const _TagSelect: React.FC<
     thisOptionProps = {
       ...optionProps,
       children: (
-        <TagPopover id={object.id} placement={props.hoverPlacement}>
+        <TagPopover id={object.id} placement={props.hoverPlacement ?? "right"}>
           <span className="react-select-image-option">
             {/* the following code causes re-rendering issues when selecting tags */}
             {/* <TagPopover
@@ -251,8 +251,7 @@ const _TagIDSelect: React.FC<IFilterProps & IFilterIDProps<Tag>> = (props) => {
   }
 
   async function loadObjectsByID(idsToLoad: string[]): Promise<Tag[]> {
-    const tagIDs = idsToLoad.map((id) => parseInt(id));
-    const query = await queryFindTagsByIDForSelect(tagIDs);
+    const query = await queryFindTagsByIDForSelect(idsToLoad);
     const { tags: loadedTags } = query.data.findTags;
 
     return loadedTags;

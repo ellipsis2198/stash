@@ -9,7 +9,7 @@ import cx from "classnames";
 
 import * as GQL from "src/core/generated-graphql";
 import {
-  queryFindGalleries,
+  queryFindGalleriesForSelect,
   queryFindGalleriesByIDForSelect,
 } from "src/core/StashService";
 import { ConfigurationContext } from "src/hooks/Config";
@@ -27,7 +27,12 @@ import { useCompare } from "src/hooks/state";
 import { Placement } from "react-bootstrap/esm/Overlay";
 import { sortByRelevance } from "src/utils/query";
 import { galleryTitle } from "src/core/galleries";
-import { PatchComponent } from "src/pluginApi";
+import { PatchComponent } from "src/patch";
+import {
+  Criterion,
+  CriterionValue,
+} from "src/models/list-filter/criteria/criterion";
+import { PathCriterion } from "src/models/list-filter/criteria/path";
 
 export type Gallery = Pick<GQL.Gallery, "id" | "title"> & {
   files: Pick<GQL.GalleryFile, "path">[];
@@ -35,12 +40,14 @@ export type Gallery = Pick<GQL.Gallery, "id" | "title"> & {
 };
 type Option = SelectOption<Gallery>;
 
+type ExtraGalleryProps = {
+  hoverPlacement?: Placement;
+  excludeIds?: string[];
+  extraCriteria?: Array<Criterion<CriterionValue>>;
+};
+
 const _GallerySelect: React.FC<
-  IFilterProps &
-    IFilterValueProps<Gallery> & {
-      hoverPlacement?: Placement;
-      excludeIds?: string[];
-    }
+  IFilterProps & IFilterValueProps<Gallery> & ExtraGalleryProps
 > = (props) => {
   const { configuration } = React.useContext(ConfigurationContext);
   const intl = useIntl();
@@ -56,7 +63,12 @@ const _GallerySelect: React.FC<
     filter.itemsPerPage = maxOptionsShown;
     filter.sortBy = "title";
     filter.sortDirection = GQL.SortDirectionEnum.Asc;
-    const query = await queryFindGalleries(filter);
+
+    if (props.extraCriteria) {
+      filter.criteria = [...props.extraCriteria];
+    }
+
+    const query = await queryFindGalleriesForSelect(filter);
     let ret = query.data.findGalleries.galleries.filter((gallery) => {
       // HACK - we should probably exclude these in the backend query, but
       // this will do in the short-term
@@ -176,9 +188,9 @@ const _GallerySelect: React.FC<
 
 export const GallerySelect = PatchComponent("GallerySelect", _GallerySelect);
 
-const _GalleryIDSelect: React.FC<IFilterProps & IFilterIDProps<Gallery>> = (
-  props
-) => {
+const _GalleryIDSelect: React.FC<
+  IFilterProps & IFilterIDProps<Gallery> & ExtraGalleryProps
+> = (props) => {
   const { ids, onSelect: onSelectValues } = props;
 
   const [values, setValues] = useState<Gallery[]>([]);
@@ -190,8 +202,7 @@ const _GalleryIDSelect: React.FC<IFilterProps & IFilterIDProps<Gallery>> = (
   }
 
   async function loadObjectsByID(idsToLoad: string[]): Promise<Gallery[]> {
-    const galleryIDs = idsToLoad.map((id) => parseInt(id));
-    const query = await queryFindGalleriesByIDForSelect(galleryIDs);
+    const query = await queryFindGalleriesByIDForSelect(idsToLoad);
     const { galleries: loadedGalleries } = query.data.findGalleries;
 
     return loadedGalleries;
@@ -228,3 +239,11 @@ export const GalleryIDSelect = PatchComponent(
   "GalleryIDSelect",
   _GalleryIDSelect
 );
+
+function getExcludeFilebaseGalleriesFilter() {
+  const ret = new PathCriterion();
+  ret.modifier = GQL.CriterionModifier.IsNull;
+  return ret;
+}
+
+export const excludeFileBasedGalleries = [getExcludeFilebaseGalleriesFilter()];

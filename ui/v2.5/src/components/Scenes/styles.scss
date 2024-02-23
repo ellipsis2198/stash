@@ -237,9 +237,21 @@ textarea.scene-description {
 .movie-table {
   width: 100%;
 
-  td {
-    vertical-align: middle;
+  .movie-row {
+    align-items: center;
+    margin-bottom: 0.25rem;
   }
+
+  .movie-scene-number-header {
+    color: $text-muted;
+    font-size: 0.8em;
+    padding-bottom: 0;
+    padding-top: 0;
+  }
+}
+
+.movie-table.no-movies .movie-table-header {
+  display: none;
 }
 
 .scene-tabs {
@@ -736,5 +748,39 @@ input[type="range"].blue-slider {
 
   &:hover .hover-scrubber-indicator {
     bottom: 0;
+  }
+}
+
+.play-history dl {
+  margin-top: 0.5rem;
+}
+
+.play-history,
+.o-history {
+  .history-header h5 {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .history-operations-dropdown {
+    display: inline-block;
+  }
+
+  .add-date-button {
+    color: $success;
+  }
+
+  .remove-date-button {
+    color: $danger;
+  }
+
+  ul {
+    padding-inline-start: 1rem;
+
+    li {
+      display: flex;
+      justify-content: space-between;
+    }
   }
 }
