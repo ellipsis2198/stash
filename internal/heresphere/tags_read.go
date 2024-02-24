@@ -24,15 +24,15 @@ func (rs routes) getVideoTags(ctx context.Context, scene *models.Scene) []Heresp
 		processedTags = append(processedTags, rs.generateGalleryTags(ctx, scene)...)
 		processedTags = append(processedTags, rs.generateMovieTags(ctx, scene)...)
 		processedTags = append(processedTags, rs.generateStudioTag(ctx, scene)...)
+		processedTags = append(processedTags, rs.generateWatchedTag(ctx, scene)...)
+		processedTags = append(processedTags, rs.generateOrgasmedTag(ctx, scene)...)
+		processedTags = append(processedTags, rs.generatePlayCountTag(ctx, scene)...)
+		processedTags = append(processedTags, rs.generateOCounterTag(ctx, scene)...)
 		processedTags = append(processedTags, rs.generateInteractiveTag(scene)...)
 		processedTags = append(processedTags, rs.generateDirectorTag(scene)...)
 		processedTags = append(processedTags, rs.generateRatingTag(scene)...)
-		processedTags = append(processedTags, rs.generateWatchedTag(scene)...)
 		processedTags = append(processedTags, rs.generateOrganizedTag(scene)...)
 		processedTags = append(processedTags, rs.generateRatedTag(scene)...)
-		processedTags = append(processedTags, rs.generateOrgasmedTag(scene)...)
-		processedTags = append(processedTags, rs.generatePlayCountTag(scene)...)
-		processedTags = append(processedTags, rs.generateOCounterTag(scene)...)
 
 		return err
 	}); err != nil {
@@ -239,13 +239,15 @@ func (rs routes) generateRatingTag(scene *models.Scene) []HeresphereVideoTag {
 	return tags
 }
 
-func (rs routes) generateWatchedTag(scene *models.Scene) []HeresphereVideoTag {
+func (rs routes) generateWatchedTag(ctx context.Context, scene *models.Scene) []HeresphereVideoTag {
 	// Generate watched tag
+	views, _ := rs.ViewFinder.CountViews(ctx, scene.ID)
+
 	return []HeresphereVideoTag{
 		{
 			Name: fmt.Sprintf("%s:%s",
 				string(HeresphereCustomTagWatched),
-				strconv.FormatBool(scene.PlayCount > 0),
+				strconv.FormatBool(views > 0),
 			),
 		},
 	}
@@ -275,30 +277,33 @@ func (rs routes) generateRatedTag(scene *models.Scene) []HeresphereVideoTag {
 	}
 }
 
-func (rs routes) generateOrgasmedTag(scene *models.Scene) []HeresphereVideoTag {
+func (rs routes) generateOrgasmedTag(ctx context.Context, scene *models.Scene) []HeresphereVideoTag {
 	// Generate orgasmed tag
+	ocount, _ := rs.OCountFinder.GetOCount(ctx, scene.ID)
 	return []HeresphereVideoTag{
 		{
 			Name: fmt.Sprintf("%s:%s",
 				string(HeresphereCustomTagOrgasmed),
-				strconv.FormatBool(scene.OCounter > 0),
+				strconv.FormatBool(ocount > 0),
 			),
 		},
 	}
 }
 
-func (rs routes) generatePlayCountTag(scene *models.Scene) []HeresphereVideoTag {
+func (rs routes) generatePlayCountTag(ctx context.Context, scene *models.Scene) []HeresphereVideoTag {
+	views, _ := rs.ViewFinder.CountViews(ctx, scene.ID)
 	return []HeresphereVideoTag{
 		{
-			Name: fmt.Sprintf("%s:%d", string(HeresphereCustomTagPlayCount), scene.PlayCount),
+			Name: fmt.Sprintf("%s:%d", string(HeresphereCustomTagPlayCount), views),
 		},
 	}
 }
 
-func (rs routes) generateOCounterTag(scene *models.Scene) []HeresphereVideoTag {
+func (rs routes) generateOCounterTag(ctx context.Context, scene *models.Scene) []HeresphereVideoTag {
+	ocount, _ := rs.OCountFinder.GetOCount(ctx, scene.ID)
 	return []HeresphereVideoTag{
 		{
-			Name: fmt.Sprintf("%s:%d", string(HeresphereCustomTagOCounter), scene.OCounter),
+			Name: fmt.Sprintf("%s:%d", string(HeresphereCustomTagOCounter), ocount),
 		},
 	}
 }

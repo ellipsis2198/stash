@@ -64,6 +64,16 @@ type studioFinder interface {
 	models.StudioFinder
 }
 
+type ocountFinder interface {
+	models.ODateReader
+	models.OHistoryWriter
+}
+
+type viewFinder interface {
+	models.ViewDateReader
+	models.ViewHistoryWriter
+}
+
 type hookExecutor interface {
 	ExecutePostHooks(ctx context.Context, id int, hookType plugin.HookTriggerEnum, input interface{}, inputFields []string)
 }

@@ -54,12 +54,6 @@ func (rs routes) handleTags(ctx context.Context, scn *models.Scene, user *Heresp
 		if rs.handleSetRated(ctx, tagI, scn, ret) {
 			continue
 		}
-		if rs.handleSetPlayCount(ctx, tagI, scn, ret) {
-			continue
-		}
-		if rs.handleSetOCount(ctx, tagI, scn, ret) {
-			continue
-		}
 	}
 
 	// Update tags
@@ -229,12 +223,11 @@ func (rs routes) handleSetWatched(ctx context.Context, tag HeresphereVideoTag, s
 	after := strings.TrimPrefix(tag.Name, prefix)
 	if b, err := strconv.ParseBool(after); err == nil {
 		// Plays chicken
-		if b && scene.PlayCount == 0 {
-			ret.Partial.PlayCount.Set = true
-			ret.Partial.PlayCount.Value = 1
+		views, _ := rs.ViewFinder.CountViews(ctx, scene.ID)
+		if b && views == 0 {
+			rs.ViewFinder.AddViews(ctx, scene.ID, []time.Time{time.Now()})
 		} else if !b {
-			ret.Partial.PlayCount.Set = true
-			ret.Partial.PlayCount.Value = 0
+			rs.ViewFinder.DeleteAllViews(ctx, scene.ID)
 		}
 	}
 
@@ -264,34 +257,6 @@ func (rs routes) handleSetRated(ctx context.Context, tag HeresphereVideoTag, sce
 	if b, err := strconv.ParseBool(after); err == nil && !b {
 		ret.Partial.Rating.Set = true
 		ret.Partial.Rating.Null = true
-	}
-
-	return true
-}
-func (rs routes) handleSetPlayCount(ctx context.Context, tag HeresphereVideoTag, scene *models.Scene, ret *scene.UpdateSet) bool {
-	prefix := string(HeresphereCustomTagPlayCount) + ":"
-	if !strings.HasPrefix(tag.Name, prefix) {
-		return false
-	}
-
-	after := strings.TrimPrefix(tag.Name, prefix)
-	if numRes, err := strconv.Atoi(after); err == nil {
-		ret.Partial.PlayCount.Set = true
-		ret.Partial.PlayCount.Value = numRes
-	}
-
-	return true
-}
-func (rs routes) handleSetOCount(ctx context.Context, tag HeresphereVideoTag, scene *models.Scene, ret *scene.UpdateSet) bool {
-	prefix := string(HeresphereCustomTagOCounter) + ":"
-	if !strings.HasPrefix(tag.Name, prefix) {
-		return false
-	}
-
-	after := strings.TrimPrefix(tag.Name, prefix)
-	if numRes, err := strconv.Atoi(after); err == nil {
-		ret.Partial.OCounter.Set = true
-		ret.Partial.OCounter.Value = numRes
 	}
 
 	return true

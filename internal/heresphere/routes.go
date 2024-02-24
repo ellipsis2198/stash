@@ -49,6 +49,8 @@ type routes struct {
 	GalleryFinder     galleryFinder
 	MovieFinder       movieFinder
 	StudioFinder      studioFinder
+	OCountFinder      ocountFinder
+	ViewFinder        viewFinder
 	HookExecutor      hookExecutor
 }
 
@@ -308,7 +310,7 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 		Duration:       0.0,
 		Rating:         0,
 		Favorites:      0,
-		Comments:       scene.OCounter,
+		Comments:       0,
 		IsFavorite:     rs.getVideoFavorite(r, scene),
 		Projection:     HeresphereProjectionPerspective,
 		Stereo:         HeresphereStereoMono,

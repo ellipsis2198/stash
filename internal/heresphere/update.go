@@ -3,6 +3,7 @@ package heresphere
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/stashapp/stash/internal/manager"
 	"github.com/stashapp/stash/pkg/file"
@@ -30,17 +31,7 @@ func (rs routes) updatePlayCount(ctx context.Context, scn *models.Scene, event H
 		file := scn.Files.Primary()
 
 		if file != nil && newTime/file.Duration > float64(per)/100.0 {
-			ret := &scene.UpdateSet{
-				ID:      scn.ID,
-				Partial: models.NewScenePartial(),
-			}
-			ret.Partial.PlayCount.Set = true
-			ret.Partial.PlayCount.Value = scn.PlayCount + 1
-
-			err := rs.withTxn(ctx, func(ctx context.Context) error {
-				_, err := ret.Update(ctx, rs.SceneFinder)
-				return err
-			})
+			_, err := rs.ViewFinder.AddViews(ctx, scn.ID, []time.Time{time.Now()})
 			return err == nil, err
 		}
 	}
