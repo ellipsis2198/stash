@@ -20,6 +20,18 @@ func (m IntCriterionStored) ToOriginal() *models.IntCriterionInput {
 	return &obj
 }
 
+type PHashDuplicationCriterionStored struct {
+	Modifier models.CriterionModifier `json:"modifier"`
+	Value    bool                     `json:"value"`
+}
+
+func (m PHashDuplicationCriterionStored) ToOriginal() *models.PHashDuplicationCriterionInput {
+	obj := models.PHashDuplicationCriterionInput{
+		Duplicated: &m.Value,
+	}
+	return &obj
+}
+
 type DateCriterionStored struct {
 	Modifier models.CriterionModifier  `json:"modifier"`
 	Value    models.DateCriterionInput `json:"value"`
@@ -114,7 +126,7 @@ type SceneFilterTypeStored struct {
 	// Filter by o-counter
 	OCounter *IntCriterionStored `json:"o_counter"`
 	// Filter Scenes that have an exact phash match available
-	Duplicated *models.PHashDuplicationCriterionInput `json:"duplicated"`
+	Duplicated *PHashDuplicationCriterionStored `json:"duplicated"`
 	// Filter by resolution
 	Resolution *models.ResolutionCriterionInput `json:"resolution"`
 	// Filter by video codec
@@ -181,7 +193,6 @@ func (fsf SceneFilterTypeStored) ToOriginal() *models.SceneFilterType {
 		Checksum:        fsf.Checksum,
 		Phash:           fsf.Phash,
 		Path:            fsf.Path,
-		Duplicated:      fsf.Duplicated,
 		Resolution:      fsf.Resolution,
 		VideoCodec:      fsf.VideoCodec,
 		AudioCodec:      fsf.AudioCodec,
@@ -218,6 +229,9 @@ func (fsf SceneFilterTypeStored) ToOriginal() *models.SceneFilterType {
 	}
 	if fsf.Duration != nil {
 		model.Duration = fsf.Duration.ToOriginal()
+	}
+	if fsf.Duplicated != nil {
+		model.Duplicated = fsf.Duplicated.ToOriginal()
 	}
 	if fsf.HasMarkers != nil {
 		model.HasMarkers = &fsf.HasMarkers.Value
