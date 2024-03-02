@@ -67,6 +67,8 @@ func GetRoutes(repo models.Repository) chi.Router {
 		GalleryFinder:     repo.Gallery,
 		MovieFinder:       repo.Movie,
 		StudioFinder:      repo.Studio,
+		OCountFinder:      repo.Scene,
+		ViewFinder:        repo.Scene,
 		HookExecutor:      manager.GetInstance().PluginCache,
 	}.Routes()
 }
