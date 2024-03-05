@@ -162,6 +162,9 @@ func (f *FFMpeg) hwCodecMaxRes(codec VideoCodec, dW int, dH int) (int, int) {
 
 // Return a maxres filter
 func (f *FFMpeg) hwMaxResFilter(codec VideoCodec, width int, height int, max int) VideoFilter {
+	if width == 0 || height == 0 {
+		return ""
+	}
 	videoFilter := f.hwFilterInit(codec)
 	maxWidth, maxHeight := f.hwCodecMaxRes(codec, width, height)
 	videoFilter = videoFilter.ScaleMaxLM(width, height, max, maxWidth, maxHeight)
