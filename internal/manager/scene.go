@@ -2,7 +2,9 @@ package manager
 
 import (
 	"fmt"
+	"mime"
 	"net/url"
+	"path/filepath"
 
 	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/pkg/ffmpeg"
@@ -11,9 +13,10 @@ import (
 )
 
 type SceneStreamEndpoint struct {
-	URL      string  `json:"url"`
-	MimeType *string `json:"mime_type"`
-	Label    *string `json:"label"`
+	URL       string  `json:"url"`
+	MimeType  *string `json:"mime_type"`
+	Label     *string `json:"label"`
+	AudioOnly bool    `json:"audio_only"`
 }
 
 type endpointType struct {
@@ -117,6 +120,8 @@ func GetSceneStreamPaths(scene *models.Scene, directStreamURL *url.URL, maxStrea
 		url.Path += t.extension
 
 		label := t.label
+		mimetype := t.mimeType
+		audioonly := pf.Height == 0 && pf.Width == 0
 
 		if resolution != "" {
 			v := url.Query()
@@ -137,10 +142,15 @@ func GetSceneStreamPaths(scene *models.Scene, directStreamURL *url.URL, maxStrea
 			}
 		}
 
+		if audioonly {
+			mimetype = mime.TypeByExtension(filepath.Ext(pf.Base().Basename))
+		}
+
 		return &SceneStreamEndpoint{
-			URL:      url.String(),
-			MimeType: &t.mimeType,
-			Label:    &label,
+			URL:       url.String(),
+			MimeType:  &mimetype,
+			Label:     &label,
+			AudioOnly: audioonly,
 		}
 	}
 

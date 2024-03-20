@@ -2,6 +2,7 @@ import videojs, { VideoJsPlayer } from "video.js";
 
 export interface ISource extends videojs.Tech.SourceObject {
   label?: string;
+  audio_only: boolean;
 }
 
 class SourceMenuItem extends videojs.getComponent("MenuItem") {
@@ -130,6 +131,10 @@ class SourceSelectorPlugin extends videojs.getPlugin("plugin") {
 
         const currentSrc = player.currentSrc();
         if (currentSrc === null) return;
+
+        // If there is no video in this media, dont skip
+        const loadSrc = this.sources[this.selectedIndex];
+        if (loadSrc.audio_only) return;
 
         if (currentSrc.includes(".m3u8") || currentSrc.includes(".mpd")) {
           player.play();

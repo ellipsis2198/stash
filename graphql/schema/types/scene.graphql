@@ -244,6 +244,7 @@ type SceneStreamEndpoint {
   url: String!
   mime_type: String
   label: String
+  audio_only: Boolean!
 }
 
 input AssignSceneFileInput {

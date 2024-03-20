@@ -591,6 +591,7 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = ({
             type: stream.mime_type ?? undefined,
             label: stream.label ?? undefined,
             offset: !isDirect(src),
+            audio_only: stream.audio_only,
             duration,
           };
         })

@@ -77,5 +77,6 @@ fragment SceneData on Scene {
     url
     mime_type
     label
+    audio_only
   }
 }

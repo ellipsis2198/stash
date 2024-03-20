@@ -86,6 +86,7 @@ query SceneStreams($id: ID!) {
       url
       mime_type
       label
+      audio_only
     }
   }
 }
