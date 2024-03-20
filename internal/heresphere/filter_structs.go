@@ -129,6 +129,10 @@ type SceneFilterTypeStored struct {
 	Duplicated *PHashDuplicationCriterionStored `json:"duplicated"`
 	// Filter by resolution
 	Resolution *models.ResolutionCriterionInput `json:"resolution"`
+	// Filter by framerate
+	Framerate *IntCriterionStored `json:"frame_rate"`
+	// Filter by bitrate
+	Bitrate *IntCriterionStored `json:"bit_rate"`
 	// Filter by video codec
 	VideoCodec *models.StringCriterionInput `json:"video_codec"`
 	// Filter by audio codec
@@ -291,6 +295,12 @@ func (fsf SceneFilterTypeStored) ToOriginal() *models.SceneFilterType {
 	}
 	if fsf.UpdatedAt != nil {
 		model.UpdatedAt = fsf.UpdatedAt.ToOriginal()
+	}
+	if fsf.Framerate != nil {
+		model.Framerate = fsf.Framerate.ToOriginal()
+	}
+	if fsf.Bitrate != nil {
+		model.Bitrate = fsf.Bitrate.ToOriginal()
 	}
 
 	return &model
