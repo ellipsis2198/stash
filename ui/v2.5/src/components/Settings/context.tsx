@@ -480,52 +480,6 @@ export const SettingsContext: React.FC = ({ children }) => {
   }
 
   // saves the configuration if no further changes are made after a half second
-  const saveHSPConfig = useDebounce(async (input: GQL.ConfigHspInput) => {
-    try {
-      setUpdateSuccess(undefined);
-      await updateHSPConfig({
-        variables: {
-          input,
-        },
-      });
-
-      setPendingHSP(undefined);
-      onSuccess();
-    } catch (e) {
-      onError(e);
-    }
-  }, 500);
-
-  useEffect(() => {
-    if (!pendingHSP) {
-      return;
-    }
-
-    saveHSPConfig(pendingHSP);
-  }, [pendingHSP, saveHSPConfig]);
-
-  function saveHSP(input: Partial<GQL.ConfigHspInput>) {
-    if (!hsp) {
-      return;
-    }
-
-    setHSP({
-      ...hsp,
-      ...input,
-    });
-
-    setPendingHSP((current) => {
-      if (!current) {
-        return input;
-      }
-      return {
-        ...current,
-        ...input,
-      };
-    });
-  }
-
-  // saves the configuration if no further changes are made after a half second
   const saveUIConfig = useDebounce(async (input: Partial<IUIConfig>) => {
     try {
       setUpdateSuccess(undefined);

@@ -9,6 +9,7 @@ import (
 	"github.com/stashapp/stash/pkg/file"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/plugin"
+	"github.com/stashapp/stash/pkg/plugin/hook"
 	"github.com/stashapp/stash/pkg/scene"
 )
 
@@ -74,7 +75,7 @@ func (rs routes) handleDeleteScene(ctx context.Context, scn *models.Scene) (bool
 		fileDeleter.Commit()
 
 		// Plugin callback
-		rs.HookExecutor.ExecutePostHooks(ctx, scn.ID, plugin.SceneDestroyPost, plugin.ScenesDestroyInput{
+		rs.HookExecutor.ExecutePostHooks(ctx, scn.ID, hook.SceneDestroyPost, plugin.ScenesDestroyInput{
 			ScenesDestroyInput: input,
 			Checksum:           scn.Checksum,
 			OSHash:             scn.OSHash,
