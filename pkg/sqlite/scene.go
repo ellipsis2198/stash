@@ -993,6 +993,7 @@ func (qb *SceneStore) makeFilter(ctx context.Context, sceneFilter *models.SceneF
 	query.handleCriterion(ctx, scenePerformerCountCriterionHandler(qb, sceneFilter.PerformerCount))
 	query.handleCriterion(ctx, studioCriterionHandler(sceneTable, sceneFilter.Studios))
 	query.handleCriterion(ctx, sceneMoviesCriterionHandler(qb, sceneFilter.Movies))
+	query.handleCriterion(ctx, sceneGalleriesCriterionHandler(qb, sceneFilter.Galleries))
 	query.handleCriterion(ctx, scenePerformerTagsCriterionHandler(qb, sceneFilter.PerformerTags))
 	query.handleCriterion(ctx, scenePerformerFavoriteCriterionHandler(sceneFilter.PerformerFavorite))
 	query.handleCriterion(ctx, scenePerformerAgeCriterionHandler(sceneFilter.PerformerAge))
@@ -1454,6 +1455,15 @@ func sceneMoviesCriterionHandler(qb *SceneStore, movies *models.MultiCriterionIn
 	return h.handler(movies)
 }
 
+func sceneGalleriesCriterionHandler(qb *SceneStore, galleries *models.MultiCriterionInput) criterionHandlerFunc {
+	addJoinsFunc := func(f *filterBuilder) {
+		qb.galleriesRepository().join(f, "", "scenes.id")
+		f.addLeftJoin("galleries", "", "scenes_galleries.gallery_id = galleries.id")
+	}
+	h := qb.getMultiCriterionHandlerBuilder(galleryTable, scenesGalleriesTable, "gallery_id", addJoinsFunc)
+	return h.handler(galleries)
+}
+
 func scenePerformerTagsCriterionHandler(qb *SceneStore, tags *models.HierarchicalMultiCriterionInput) criterionHandler {
 	return &joinedPerformerTagsHandler{
 		criterion:      tags,
@@ -1597,6 +1607,8 @@ func (qb *SceneStore) setSceneSort(query *queryBuilder, findFilter *models.FindF
 		query.sortAndPagination += getCountSort(sceneTable, scenesViewDatesTable, sceneIDColumn, direction)
 	case "last_played_at":
 		query.sortAndPagination += fmt.Sprintf(" ORDER BY (SELECT MAX(view_date) FROM %s AS sort WHERE sort.%s = %s.id) %s", scenesViewDatesTable, sceneIDColumn, sceneTable, getSortDirection(direction))
+	case "last_o_at":
+		query.sortAndPagination += fmt.Sprintf(" ORDER BY (SELECT MAX(o_date) FROM %s AS sort WHERE sort.%s = %s.id) %s", scenesODatesTable, sceneIDColumn, sceneTable, getSortDirection(direction))
 	case "o_counter":
 		query.sortAndPagination += getCountSort(sceneTable, scenesODatesTable, sceneIDColumn, direction)
 	default:

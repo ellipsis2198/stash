@@ -42,12 +42,14 @@ import { lazyComponent } from "./utils/lazyComponent";
 import { isPlatformUniquelyRenderedByApple } from "./utils/apple";
 import useScript, { useCSS } from "./hooks/useScript";
 import { useMemoOnce } from "./hooks/state";
+import Event from "./hooks/event";
 import { uniq } from "lodash-es";
 
 import { PluginRoutes } from "./plugins";
 
 // import plugin_api to run code
 import "./pluginApi";
+import { ConnectionMonitor } from "./ConnectionMonitor";
 
 const Performers = lazyComponent(
   () => import("./components/Performers/Performers")
@@ -249,6 +251,11 @@ export const App: React.FC = () => {
   const history = useHistory();
   const setupMatch = useRouteMatch(["/setup", "/migrate"]);
 
+  // dispatch event when location changes
+  useEffect(() => {
+    Event.dispatch("location", "", { location });
+  }, [location]);
+
   // redirect to setup or migrate as needed
   useEffect(() => {
     if (!systemStatusData) {
@@ -363,6 +370,7 @@ export const App: React.FC = () => {
           >
             {maybeRenderReleaseNotes()}
             <ToastProvider>
+              <ConnectionMonitor />
               <Suspense fallback={<LoadingIndicator />}>
                 <LightboxProvider>
                   <ManualProvider>

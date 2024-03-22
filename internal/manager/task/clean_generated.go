@@ -106,17 +106,15 @@ func (j *CleanGeneratedJob) logError(err error) {
 	}
 }
 
-func (j *CleanGeneratedJob) Execute(ctx context.Context, progress *job.Progress) {
+func (j *CleanGeneratedJob) Execute(ctx context.Context, progress *job.Progress) error {
 	j.tasksComplete = 0
 
 	if !j.BlobsStorageType.IsValid() {
-		logger.Errorf("invalid blobs storage type: %s", j.BlobsStorageType)
-		return
+		return fmt.Errorf("invalid blobs storage type: %s", j.BlobsStorageType)
 	}
 
 	if !j.VideoFileNamingAlgorithm.IsValid() {
-		logger.Errorf("invalid video file naming algorithm: %s", j.VideoFileNamingAlgorithm)
-		return
+		return fmt.Errorf("invalid video file naming algorithm: %s", j.VideoFileNamingAlgorithm)
 	}
 
 	if j.Options.DryRun {
@@ -183,10 +181,11 @@ func (j *CleanGeneratedJob) Execute(ctx context.Context, progress *job.Progress)
 
 	if job.IsCancelled(ctx) {
 		logger.Info("Stopping due to user request")
-		return
+		return nil
 	}
 
 	logger.Infof("Finished cleaning generated files")
+	return nil
 }
 
 func (j *CleanGeneratedJob) setTaskProgress(taskProgress float64, progress *job.Progress) {
@@ -652,9 +651,13 @@ func (j *CleanGeneratedJob) getImagesWithHash(ctx context.Context, checksum stri
 }
 
 func (j *CleanGeneratedJob) getThumbnailFileHash(basename string) (string, error) {
-	var hash string
-	var width int
-	_, err := fmt.Sscanf(basename, "%32x_%d.jpg", &hash, &width)
+	var (
+		hash  string
+		width int
+		ext   string
+	)
+	// include the extension - which could be jpg/webp
+	_, err := fmt.Sscanf(basename, "%32x_%d.%s", &hash, &width, &ext)
 	if err != nil {
 		return "", err
 	}

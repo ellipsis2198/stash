@@ -34,12 +34,12 @@ type ScanJob struct {
 	subscriptions *subscriptionManager
 }
 
-func (j *ScanJob) Execute(ctx context.Context, progress *job.Progress) {
+func (j *ScanJob) Execute(ctx context.Context, progress *job.Progress) error {
 	input := j.input
 
 	if job.IsCancelled(ctx) {
 		logger.Info("Stopping due to user request")
-		return
+		return nil
 	}
 
 	sp := getScanPaths(input.Paths)
@@ -74,13 +74,14 @@ func (j *ScanJob) Execute(ctx context.Context, progress *job.Progress) {
 
 	if job.IsCancelled(ctx) {
 		logger.Info("Stopping due to user request")
-		return
+		return nil
 	}
 
 	elapsed := time.Since(start)
 	logger.Info(fmt.Sprintf("Scan finished (%s)", elapsed))
 
 	j.subscriptions.notify()
+	return nil
 }
 
 type extensionConfig struct {
@@ -176,7 +177,8 @@ func (f *handlerRequiredFilter) Accept(ctx context.Context, ff models.File) bool
 	// if create galleries from folder is enabled and the file is not in a zip
 	// file, then check if there is a folder-based gallery for the file's
 	// directory
-	if isImageFile && instance.Config.GetCreateGalleriesFromFolders() && ff.Base().ZipFileID == nil {
+	// #4611 - also check for .forcegallery
+	if isImageFile && ff.Base().ZipFileID == nil {
 		// only do this for the first time it encounters the folder
 		// the first instance should create the gallery
 		_, found := f.FolderCache.Get(ctx, ff.Base().ParentFolderID.String())
@@ -185,8 +187,22 @@ func (f *handlerRequiredFilter) Accept(ctx context.Context, ff models.File) bool
 			return false
 		}
 
-		g, _ := f.GalleryFinder.FindByFolderID(ctx, ff.Base().ParentFolderID)
 		f.FolderCache.Add(ctx, ff.Base().ParentFolderID.String(), true)
+
+		createGallery := instance.Config.GetCreateGalleriesFromFolders()
+		if !createGallery {
+			// check for presence of .forcegallery
+			forceGalleryPath := filepath.Join(filepath.Dir(path), ".forcegallery")
+			if exists, _ := fsutil.FileExists(forceGalleryPath); exists {
+				createGallery = true
+			}
+		}
+
+		if !createGallery {
+			return false
+		}
+
+		g, _ := f.GalleryFinder.FindByFolderID(ctx, ff.Base().ParentFolderID)
 
 		if len(g) == 0 {
 			// no folder gallery. Return true so that it creates one.

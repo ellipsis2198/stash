@@ -136,6 +136,7 @@ export type CriterionType =
   | "audio_codec"
   | "duration"
   | "filter_favorites"
+  | "favorite"
   | "has_markers"
   | "is_missing"
   | "tags"

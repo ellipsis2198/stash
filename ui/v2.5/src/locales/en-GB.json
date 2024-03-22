@@ -331,6 +331,18 @@
       "excluded_video_patterns_desc": "Regexps of video files/paths to exclude from Scan and add to Clean",
       "excluded_video_patterns_head": "Excluded Video Patterns",
       "ffmpeg": {
+        "download_ffmpeg": {
+          "description": "Downloads FFmpeg into the configuration directory and clears the ffmpeg and ffprobe paths to resolve from the configuration directory.",
+          "heading": "Download FFmpeg"
+        },
+        "ffmpeg_path": {
+          "description": "Path to the ffmpeg executable (not just the folder). If empty, ffmpeg will be resolved from the environment via $PATH, the configuration directory, or from $HOME/.stash",
+          "heading": "FFmpeg Executable Path"
+        },
+        "ffprobe_path": {
+          "description": "Path to the ffprobe executable (not just the folder). If empty, ffprobe will be resolved from the environment via $PATH, the configuration directory, or from $HOME/.stash",
+          "heading": "FFprobe Executable Path"
+        },
         "hardware_acceleration": {
           "desc": "Uses available hardware to encode video for live transcoding.",
           "heading": "FFmpeg hardware encoding"
@@ -791,6 +803,10 @@
     }
   },
   "configuration": "Configuration",
+  "connection_monitor": {
+    "websocket_connection_failed": "Unable to make websocket connection: see browser console for details",
+    "websocket_connection_reestablished": "Websocket connection re-established"
+  },
   "countables": {
     "files": "{count, plural, one {File} other {Files}}",
     "galleries": "{count, plural, one {Gallery} other {Galleries}}",
@@ -986,7 +1002,7 @@
     "select_youngest": "Select the youngest file in the duplicate group",
     "title": "Duplicate Scenes"
   },
-  "duplicated_phash": "Duplicated (phash)",
+  "duplicated_phash": "Duplicated (pHash)",
   "duration": "Duration",
   "effect_filters": {
     "aspect": "Aspect",
@@ -1081,8 +1097,9 @@
   "index_of_total": "{index} of {total}",
   "instagram": "Instagram",
   "interactive": "Interactive",
-  "interactive_speed": "Interactive speed",
+  "interactive_speed": "Interactive Speed",
   "isMissing": "Is Missing",
+  "last_o_at": "Last O At",
   "last_played_at": "Last Played At",
   "library": "Library",
   "loading": {
@@ -1096,7 +1113,7 @@
     "checksum": "Checksum",
     "downloaded_from": "Downloaded From",
     "hash": "Hash",
-    "interactive_speed": "Interactive speed",
+    "interactive_speed": "Interactive Speed",
     "o_count": "O Count",
     "performer_card": {
       "age": "{age} {years_old}",
@@ -1116,6 +1133,7 @@
   "name": "Name",
   "new": "New",
   "none": "None",
+  "o_count": "O Count",
   "o_counter": "O-Counter",
   "o_history": "O History",
   "odate_recorded_no": "No O Date Recorded",
@@ -1169,7 +1187,7 @@
   "penis": "Penis",
   "penis_length": "Penis Length",
   "penis_length_cm": "Penis Length (cm)",
-  "perceptual_similarity": "Perceptual Similarity (phash)",
+  "perceptual_similarity": "Perceptual Similarity (pHash)",
   "performer": "Performer",
   "performer_age": "Performer Age",
   "performer_count": "Performer Count",
@@ -1262,8 +1280,7 @@
       "stash_library_directories": "Stash library directories"
     },
     "creating": {
-      "creating_your_system": "Creating your system",
-      "ffmpeg_notice": "If <code>ffmpeg</code> is not yet in your paths, please be patient while stash downloads it. View the console output to see download progress."
+      "creating_your_system": "Creating your system"
     },
     "errors": {
       "something_went_wrong": "Oh no! Something went wrong!",
@@ -1312,9 +1329,11 @@
     },
     "stash_setup_wizard": "Stash Setup Wizard",
     "success": {
+      "download_ffmpeg": "Download ffmpeg",
       "getting_help": "Getting help",
       "help_links": "If you run into issues or have any questions or suggestions, feel free to open an issue in the {githubLink}, or ask the community in the {discordLink}.",
       "in_app_manual_explained": "You are encouraged to check out the in-app manual which can be accessed from the icon in the top-right corner of the screen that looks like this: {icon}",
+      "missing_ffmpeg": "You are missing the required <code>ffmpeg</code> binary. You can automatically download it into your configuration directory by checking the box below. Alternatively, you can supply paths to the <code>ffmpeg</code> and <code>ffprobe</code> binaries in the System Settings. These binaries must be present for Stash to function.",
       "next_config_step_one": "You will be taken to the Configuration page next. This page will allow you to customize what files to include and exclude, set a username and password to protect your system, and a whole bunch of other options.",
       "next_config_step_two": "When you are satisfied with these settings, you can begin scanning your content into Stash by clicking on <code>{localized_task}</code>, then <code>{localized_scan}</code>.",
       "open_collective": "Check out our {open_collective_link} to see how you can contribute to the continued development of Stash.",
