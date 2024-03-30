@@ -534,6 +534,13 @@ export const SettingsServicesPanel: React.FC = () => {
             checked={hsp.writeDeletes ?? undefined}
             onChange={(v) => saveHSP({ writeDeletes: v })}
           />
+          <BooleanSetting
+            id="hsp-write-hsp"
+            headingID="config.hsp.write_hsp"
+            subHeadingID="config.hsp.write_hsp_desc"
+            checked={hsp.writeHsp ?? undefined}
+            onChange={(v) => saveHSP({ writeHsp: v })}
+          />
         </SettingSection>
       </>
     );

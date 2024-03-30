@@ -618,6 +618,9 @@ func (r *mutationResolver) ConfigureHsp(ctx context.Context, input ConfigHSPInpu
 	if input.WriteDeletes != nil {
 		c.Set(config.HSPWriteDeletes, *input.WriteDeletes)
 	}
+	if input.WriteHsp != nil {
+		c.Set(config.HSPWriteHsp, *input.WriteHsp)
+	}
 
 	if err := c.Write(); err != nil {
 		return makeConfigHSPResult(), err

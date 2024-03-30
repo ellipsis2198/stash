@@ -216,6 +216,7 @@ func makeConfigHSPResult() *ConfigHSPResult {
 		WriteRatings:   config.GetHSPWriteRatings(),
 		WriteTags:      config.GetHSPWriteTags(),
 		WriteDeletes:   config.GetHSPWriteDeletes(),
+		WriteHsp:       config.GetHSPWriteHsp(),
 	}
 }
 

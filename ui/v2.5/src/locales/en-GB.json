@@ -274,7 +274,9 @@
       "write_tags": "Write Tags",
       "write_tags_desc": "Whether to enable HSP to write tags",
       "write_deletes": "Allow deletes",
-      "write_deletes_desc": "Whether to allow scene deletion via HSP API"
+      "write_deletes_desc": "Whether to allow scene deletion via HSP API",
+      "write_hsp": "Allow writing HSP files",
+      "write_hsp_desc": "Whether to allow writing HSP files via HSP API"
     },
     "general": {
       "auth": {

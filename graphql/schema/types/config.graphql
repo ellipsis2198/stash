@@ -502,6 +502,8 @@ input ConfigHSPInput {
   writeTags: Boolean
   "True if writing deletes to HSP Api should be enabled"
   writeDeletes: Boolean
+  "True if writing files to HSP Api should be enabled"
+  writeHsp: Boolean
 }
 
 type ConfigHSPResult {
@@ -517,6 +519,8 @@ type ConfigHSPResult {
   writeTags: Boolean!
   "True if writing deletes to HSP Api should be enabled"
   writeDeletes: Boolean!
+  "True if writing files to HSP Api should be enabled"
+  writeHsp: Boolean!
 }
 
 input ConfigScrapingInput {

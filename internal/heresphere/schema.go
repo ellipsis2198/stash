@@ -97,6 +97,10 @@ type HeresphereVideoMedia struct {
 	Name    string                       `json:"name"`
 	Sources []HeresphereVideoMediaSource `json:"sources"`
 }
+type HeresphereHSPEntry struct {
+	Url     string `json:"url"`
+	Version int    `json:"version"`
+}
 type HeresphereVideoEntry struct {
 	Access         int                       `json:"access"`
 	Title          string                    `json:"title"`
@@ -116,7 +120,7 @@ type HeresphereVideoEntry struct {
 	Fov            float64                   `json:"fov,omitempty"`
 	Lens           HeresphereLens            `json:"lens"`
 	CameraIPD      float64                   `json:"cameraIPD"`
-	Hsp            string                    `json:"hsp,omitempty"`
+	HspArray       []HeresphereHSPEntry      `json:"hspArray,omitempty"`
 	EventServer    string                    `json:"eventServer,omitempty"`
 	Scripts        []HeresphereVideoScript   `json:"scripts,omitempty"`
 	Subtitles      []HeresphereVideoSubtitle `json:"subtitles,omitempty"`
@@ -126,6 +130,8 @@ type HeresphereVideoEntry struct {
 	WriteRating    bool                      `json:"writeRating"`
 	WriteTags      bool                      `json:"writeTags"`
 	WriteHSP       bool                      `json:"writeHSP"`
+	// alphaPackedSettings
+	// chromaKeySettings
 }
 type HeresphereVideoEntryShort struct {
 	Link         string               `json:"link"`

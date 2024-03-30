@@ -123,6 +123,7 @@ fragment ConfigHSPData on ConfigHSPResult {
   writeRatings
   writeTags
   writeDeletes
+  writeHsp
 }
 
 fragment ConfigScrapingData on ConfigScrapingResult {

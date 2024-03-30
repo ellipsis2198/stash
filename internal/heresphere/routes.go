@@ -3,11 +3,14 @@ package heresphere
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -94,6 +97,7 @@ func (rs routes) Routes() chi.Router {
 			r.Get("/", rs.heresphereVideoData)
 
 			r.Post("/event", rs.heresphereVideoEvent)
+			r.Get("/file.hsp", rs.heresphereHSP)
 		})
 	})
 
@@ -205,6 +209,18 @@ func (rs routes) heresphereVideoDataUpdate(w http.ResponseWriter, r *http.Reques
 		}
 		shouldUpdate = b || shouldUpdate
 	}
+	if user.HspBase64 != nil && c.GetHSPWriteHsp() {
+		decodedBytes, err := base64.StdEncoding.DecodeString(*user.HspBase64)
+		if err != nil {
+			return err
+		}
+		filename, _ := getHspFile(scn.Files.Primary())
+
+		err = os.WriteFile(filename, decodedBytes, 0644)
+		if err != nil {
+			return err
+		}
+	}
 
 	if shouldUpdate {
 		if err := rs.withTxn(r.Context(), func(ctx context.Context) error {
@@ -274,6 +290,26 @@ func (rs routes) heresphereIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (rs routes) heresphereHSP(w http.ResponseWriter, r *http.Request) {
+	// Fetch scene
+	scene := r.Context().Value(sceneKey).(*models.Scene)
+
+	/*version, err := strconv.Atoi(chi.URLParam(r, "version"))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}*/
+
+	primaryFile := scene.Files.Primary()
+	if filename, err := getHspFile(primaryFile); !os.IsNotExist(err) {
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filepath.Base(filename)))
+		http.ServeFile(w, r, filename)
+		return
+	}
+
+	w.WriteHeader(400)
+}
+
 /*
  * This endpoint provides a single scenes full information.
  */
@@ -331,7 +367,7 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 		WriteFavorite: c.GetHSPWriteFavorites(),
 		WriteRating:   c.GetHSPWriteRatings(),
 		WriteTags:     c.GetHSPWriteTags(),
-		WriteHSP:      false,
+		WriteHSP:      c.GetHSPWriteHsp(),
 	}
 
 	// Find projection options
@@ -356,6 +392,18 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 		if file_ids != nil {
 			if val := manager.HandleFloat64(file_ids.Duration * 1000.0); val != nil {
 				processedScene.Duration = *val
+			}
+		}
+
+		if _, err := getHspFile(file_ids); !os.IsNotExist(err) {
+			processedScene.HspArray = []HeresphereHSPEntry{
+				{
+					Url: addApiKey(fmt.Sprintf("%s/heresphere/%d/file.hsp",
+						manager.GetBaseURL(r),
+						scene.ID,
+					)),
+					//Version: 8,
+				},
 			}
 		}
 	}
