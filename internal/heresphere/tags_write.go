@@ -127,55 +127,59 @@ func (rs routes) handleAddMarker(ctx context.Context, tag HeresphereVideoTag, sc
 	}
 
 	after := strings.TrimPrefix(tag.Name, "Marker:")
-	var tagId *string
+	var err error
+	var tagId *int
+	var markers []*models.SceneMarker
 
-	if err := rs.withReadTxn(ctx, func(ctx context.Context) error {
-		var err error
-		var markerResult []*models.MarkerStringsResultType
-		searchType := "count"
+	if err = rs.withReadTxn(ctx, func(ctx context.Context) error {
+		var markerTag *models.Tag
 
-		// Search for marker
-		if markerResult, err = rs.SceneMarkerFinder.GetMarkerStrings(ctx, &after, &searchType); len(markerResult) > 0 {
-			tagId = &markerResult[0].ID
+		// Search for tag
+		if markerTag, err = rs.TagFinder.FindByName(ctx, after, true); err != nil {
+			return err
+		}
 
-			// Search for tag
-			if markers, err := rs.SceneMarkerFinder.FindBySceneID(ctx, scene.ID); err == nil {
-				i, err := strconv.Atoi(*tagId)
-				if err == nil {
-					// Note: Currently we search if a marker exists.
-					// If it doesn't, create it.
-					// This also means that markers CANNOT be deleted using the api.
-					for _, marker := range markers {
-						if marker.Seconds == tag.Start &&
-							marker.SceneID == scene.ID &&
-							marker.PrimaryTagID == i {
-							tagId = nil
-						}
-					}
-				}
-			}
+		tagId = &markerTag.ID
+
+		// Search for tag
+		if markers, err = rs.SceneMarkerFinder.FindBySceneID(ctx, scene.ID); err != nil {
+			return err
 		}
 
 		return err
-	}); err != nil || tagId != nil {
-		// Create marker
-		i, e := strconv.Atoi(*tagId)
-		if e == nil {
-			currentTime := time.Now()
-			newMarker := models.SceneMarker{
-				Title:        "",
-				Seconds:      tag.Start,
-				PrimaryTagID: i,
-				SceneID:      scene.ID,
-				CreatedAt:    currentTime,
-				UpdatedAt:    currentTime,
-			}
+	}); err != nil {
+		logger.Errorf("Heresphere handleAddMarker withReadTxn error: %s\n", err.Error())
+		return false
+	}
 
-			if err := rs.withTxn(ctx, func(ctx context.Context) error {
-				return rs.SceneMarkerFinder.Create(ctx, &newMarker)
-			}); err != nil {
-				logger.Errorf("Heresphere handleTags SceneMarker.Create error: %s\n", err.Error())
-			}
+	// Note: Currently we search if a marker exists.
+	// If it doesn't, create it.
+	// This also means that markers CANNOT be deleted using the api.
+	for _, marker := range markers {
+		if marker.Seconds == tag.Start &&
+			marker.SceneID == scene.ID &&
+			marker.PrimaryTagID == *tagId {
+			logger.Errorf("Heresphere handleAddMarker already exists error\n")
+			return false
+		}
+	}
+
+	if tagId != nil {
+		// Create marker
+		currentTime := time.Now()
+		newMarker := models.SceneMarker{
+			Title:        "",
+			Seconds:      tag.Start,
+			PrimaryTagID: *tagId,
+			SceneID:      scene.ID,
+			CreatedAt:    currentTime,
+			UpdatedAt:    currentTime,
+		}
+
+		if err := rs.withTxn(ctx, func(ctx context.Context) error {
+			return rs.SceneMarkerFinder.Create(ctx, &newMarker)
+		}); err != nil {
+			logger.Errorf("Heresphere handleTags SceneMarker.Create error: %s\n", err.Error())
 		}
 	}
 

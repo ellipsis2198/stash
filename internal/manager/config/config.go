@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"sync"
@@ -241,6 +242,7 @@ const (
 	HSPWriteRating    = "hsp.write_rating"
 	HSPWriteTags      = "hsp.write_tags"
 	HSPWriteDeletes   = "hsp.write_deletes"
+	HSPWriteHsp       = "hsp.write_hsp"
 
 	// Logging options
 	LogFile          = "logFile"
@@ -1219,7 +1221,10 @@ func (i *Config) GetUIVRTag() string {
 func (i *Config) GetUIMinPlayPercent() int {
 	cfgMap := i.GetUIConfiguration()
 	if val, ok := cfgMap["minimumPlayPercent"]; ok {
-		return val.(int)
+		i, err := strconv.Atoi(val.(string))
+		if err == nil {
+			return i
+		}
 	}
 
 	return -1
@@ -1534,6 +1539,11 @@ func (i *Config) GetHSPWriteTags() bool {
 // GetHSPWriteDeletes returns if deletions should happen
 func (i *Config) GetHSPWriteDeletes() bool {
 	return i.getBool(HSPWriteDeletes)
+}
+
+// GetHSPWriteDeletes returns if deletions should happen
+func (i *Config) GetHSPWriteHsp() bool {
+	return i.getBool(HSPWriteHsp)
 }
 
 // GetLogFile returns the filename of the file to output logs to.

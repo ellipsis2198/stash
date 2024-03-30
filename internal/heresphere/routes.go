@@ -137,22 +137,22 @@ func (rs routes) heresphereVideoEvent(w http.ResponseWriter, r *http.Request) {
 		newDuration += (newTime - scn.ResumeTime)
 	}
 
-	// Check if the event ID is different from the previous event for the same client
-	previousID := idMap[r.RemoteAddr]
-	if previousID != event.Id {
-		// Update play count and store the new event ID if needed
-		if b, err := rs.updatePlayCount(r.Context(), scn, event); err != nil {
-			// Handle updatePlayCount error
-			logger.Errorf("Heresphere HeresphereVideoEvent updatePlayCount error: %s\n", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if b {
-			idMap[r.RemoteAddr] = event.Id
-		}
-	}
-
 	// Update the scene activity with the new time and duration
 	if err := rs.withTxn(r.Context(), func(ctx context.Context) error {
+		// Check if the event ID is different from the previous event for the same client
+		previousID := idMap[r.RemoteAddr]
+		if previousID != event.Id {
+			// Update play count and store the new event ID if needed
+			if b, err := rs.updatePlayCount(ctx, scn, event); err != nil {
+				// Handle updatePlayCount error
+				logger.Errorf("Heresphere HeresphereVideoEvent updatePlayCount error: %s\n", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return err
+			} else if b {
+				idMap[r.RemoteAddr] = event.Id
+			}
+		}
+
 		_, err := rs.SceneFinder.SaveActivity(ctx, scn.ID, &newTime, &newDuration)
 		return err
 	}); err != nil {
