@@ -79,6 +79,7 @@ const (
 	PreviewPreset                     = "preview_preset"
 	TranscodeHardwareAcceleration     = "ffmpeg.hardware_acceleration"
 	TranscodeFullHardwareAcceleration = "ffmpeg.full_hardware_acceleration"
+	AlwaysAddHardwareDecoding         = "ffmpeg.add_hardware_decode"
 
 	SequentialScanning        = "sequential_scanning"
 	SequentialScanningDefault = false
@@ -918,6 +919,10 @@ func (i *Config) GetTranscodeHardwareAcceleration() bool {
 
 func (i *Config) GetTranscodeFullHardwareAcceleration() bool {
 	return i.getBool(TranscodeFullHardwareAcceleration)
+}
+
+func (i *Config) GetAlwaysAddHardwareDecoding() bool {
+	return i.getBool(AlwaysAddHardwareDecoding)
 }
 
 func (i *Config) GetMaxTranscodeSize() models.StreamingResolutionEnum {
