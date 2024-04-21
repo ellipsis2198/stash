@@ -43,7 +43,7 @@ func (rs routes) getAllFilters(ctx context.Context) (scenesMap map[string][]int,
 	}()
 
 	if err != nil {
-		err = fmt.Errorf("heresphere FilterTest SavedFilter.FindByMode error: %s", err.Error())
+		err = fmt.Errorf("heresphere FilterTest SavedFilter.FindByMode error: %v", err)
 		return
 	}
 
@@ -57,7 +57,7 @@ func (rs routes) getAllFilters(ctx context.Context) (scenesMap map[string][]int,
 	}()
 
 	if err != nil {
-		err = fmt.Errorf("heresphere FilterTest SavedFilter.FindDefault error: %s", err.Error())
+		err = fmt.Errorf("heresphere FilterTest SavedFilter.FindDefault error: %v", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (rs routes) getAllFilters(ctx context.Context) (scenesMap map[string][]int,
 		sceneFilter, err := parseObjectFilter(savedfilter)
 
 		if err != nil {
-			logger.Errorf("Heresphere FilterTest parseObjectFilter error: %s\n", err.Error())
+			logger.Errorf("Heresphere FilterTest parseObjectFilter error: %v\n", err)
 			continue
 		}
 
@@ -110,7 +110,7 @@ func (rs routes) getAllFilters(ctx context.Context) (scenesMap map[string][]int,
 		})
 
 		if err != nil {
-			logger.Errorf("Heresphere FilterTest SceneQuery error: %s\n", err.Error())
+			logger.Errorf("Heresphere FilterTest SceneQuery error: %v\n", err)
 			continue
 		}
 

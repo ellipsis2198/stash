@@ -29,7 +29,7 @@ func (rs routes) handleFavoriteTag(ctx context.Context, scn *models.Scene, user 
 	}()
 
 	if err != nil {
-		logger.Errorf("Heresphere handleFavoriteTag Tag.Find error: %s\n", err.Error())
+		logger.Errorf("Heresphere handleFavoriteTag Tag.Find error: %v\n", err)
 		return false, err
 	}
 
@@ -73,7 +73,7 @@ func (rs routes) getVideoFavorite(r *http.Request, scene *models.Scene) bool {
 	}()
 
 	if err != nil {
-		logger.Errorf("Heresphere getVideoFavorite error: %s\n", err.Error())
+		logger.Errorf("Heresphere getVideoFavorite error: %v\n", err)
 		return false
 	}
 

@@ -7,18 +7,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nfnt/resize"
 	"github.com/stashapp/stash/internal/api/urlbuilders"
 	"github.com/stashapp/stash/internal/manager"
 	"github.com/stashapp/stash/internal/manager/config"
+	"github.com/stashapp/stash/internal/static"
+	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/scene"
@@ -55,6 +62,7 @@ type routes struct {
 	OCountFinder      ocountFinder
 	ViewFinder        viewFinder
 	HookExecutor      hookExecutor
+	SceneCoverGetter  manager.SceneCoverGetter
 }
 
 func GetRoutes(repo models.Repository) chi.Router {
@@ -72,6 +80,7 @@ func GetRoutes(repo models.Repository) chi.Router {
 		StudioFinder:      repo.Studio,
 		OCountFinder:      repo.Scene,
 		ViewFinder:        repo.Scene,
+		SceneCoverGetter:  repo.Scene,
 		HookExecutor:      manager.GetInstance().PluginCache,
 	}.Routes()
 }
@@ -96,6 +105,7 @@ func (rs routes) Routes() chi.Router {
 			r.Post("/", rs.heresphereVideoData)
 			r.Get("/", rs.heresphereVideoData)
 
+			r.Get("/screenshot", rs.heresphereScreenshot)
 			r.Post("/event", rs.heresphereVideoEvent)
 			r.Get("/file.hsp", rs.heresphereHSP)
 		})
@@ -107,6 +117,99 @@ func (rs routes) Routes() chi.Router {
 var (
 	idMap = make(map[string]string)
 )
+
+const maxRes = 360
+
+func (rs routes) getScreenshot(ctx context.Context, scene *models.Scene) (cover []byte, err error) {
+	c := config.GetInstance()
+
+	// Ensure dir
+	pth := path.Join(c.GetGeneratedPath(), "hsp_screenshot")
+	if err = fsutil.EnsureDir(pth); err != nil {
+		cover = static.ReadAll(static.DefaultSceneImage)
+		return
+	}
+
+	// Check if exists
+	pth = path.Join(pth, strconv.Itoa(scene.ID))
+	if _, err = os.Stat(pth); !os.IsNotExist(err) {
+		cover, err = os.ReadFile(pth)
+		return
+	}
+
+	// Get cover
+	if err = rs.withTxn(ctx, func(ctx context.Context) error {
+		cover, err = rs.SceneCoverGetter.GetCover(ctx, scene.ID)
+		return err
+	}); err != nil {
+		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
+		return
+	}
+
+	// Get default if needed
+	if cover == nil {
+		cover = static.ReadAll(static.DefaultSceneImage)
+		return
+	}
+
+	// Decode the image
+	img, _, err := image.Decode(bytes.NewReader(cover))
+	if err != nil {
+		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
+		return
+	}
+
+	// Get the dimensions of the original image
+	originalWidth := img.Bounds().Max.X
+	originalHeight := img.Bounds().Max.Y
+
+	// Calculate the scaling factor to fit within 360 pixels
+	var scaleFactor float64
+	if originalWidth > originalHeight {
+		scaleFactor = maxRes / float64(originalWidth)
+	} else {
+		scaleFactor = maxRes / float64(originalHeight)
+	}
+
+	// Resize the image
+	newWidth := uint(float64(originalWidth) * scaleFactor)
+	newHeight := uint(float64(originalHeight) * scaleFactor)
+	resizedImg := resize.Resize(newWidth, newHeight, img, resize.NearestNeighbor)
+
+	// Encode the resized image to JPEG format (change to PNG if needed)
+	var resizedImageBuf bytes.Buffer
+	if err = jpeg.Encode(&resizedImageBuf, resizedImg, nil); err != nil {
+		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
+		return
+	}
+
+	// Set output
+	cover = resizedImageBuf.Bytes()
+
+	// Write cache
+	if err = os.WriteFile(pth, cover, 0600); err != nil {
+		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
+		return
+	}
+
+	return
+}
+
+func (rs routes) heresphereScreenshot(w http.ResponseWriter, r *http.Request) {
+	// Get the scene from the request context
+	scene := r.Context().Value(sceneKey).(*models.Scene)
+
+	resizedImageBuf, err := rs.getScreenshot(r.Context(), scene)
+	if err != nil {
+		logger.Errorf("Heresphere heresphereScreenshot error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Set response headers
+	w.Header().Set("Content-Type", "image/jpeg")
+	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(resizedImageBuf))
+}
 
 /*
  * This is a video playback event
@@ -122,7 +225,7 @@ func (rs routes) heresphereVideoEvent(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
 		// Handle JSON decoding error
-		logger.Errorf("Heresphere HeresphereVideoEvent decode error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereVideoEvent decode error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -145,7 +248,7 @@ func (rs routes) heresphereVideoEvent(w http.ResponseWriter, r *http.Request) {
 			// Update play count and store the new event ID if needed
 			if b, err := rs.updatePlayCount(ctx, scn, event); err != nil {
 				// Handle updatePlayCount error
-				logger.Errorf("Heresphere HeresphereVideoEvent updatePlayCount error: %s\n", err.Error())
+				logger.Errorf("Heresphere HeresphereVideoEvent updatePlayCount error: %v\n", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return err
 			} else if b {
@@ -157,7 +260,7 @@ func (rs routes) heresphereVideoEvent(w http.ResponseWriter, r *http.Request) {
 		return err
 	}); err != nil {
 		// Handle SaveActivity error
-		logger.Errorf("Heresphere HeresphereVideoEvent SaveActivity error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereVideoEvent SaveActivity error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -276,7 +379,7 @@ func (rs routes) heresphereIndex(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	} else {
-		logger.Warnf("Heresphere HeresphereIndex getAllFilters error: %s\n", err.Error())
+		logger.Warnf("Heresphere HeresphereIndex getAllFilters error: %v\n", err)
 	}
 
 	// Set response headers and encode JSON
@@ -284,7 +387,7 @@ func (rs routes) heresphereIndex(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(libraryObj); err != nil {
-		logger.Errorf("Heresphere HeresphereIndex encode error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereIndex encode error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -319,7 +422,7 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 
 	// Update request
 	if err := rs.heresphereVideoDataUpdate(w, r); err != nil {
-		logger.Errorf("Heresphere HeresphereVideoData HeresphereVideoDataUpdate error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereVideoData HeresphereVideoDataUpdate error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -332,17 +435,21 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 	if err := rs.withReadTxn(r.Context(), func(ctx context.Context) error {
 		return scene.LoadRelationships(ctx, rs.SceneFinder)
 	}); err != nil {
-		logger.Errorf("Heresphere HeresphereVideoData LoadRelationships error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereVideoData LoadRelationships error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Create scene
 	processedScene = HeresphereVideoEntry{
-		Access:         HeresphereMember,
-		Title:          scene.GetTitle(),
-		Description:    scene.Details,
-		ThumbnailImage: addApiKey(urlbuilders.NewSceneURLBuilder(manager.GetBaseURL(r), scene).GetScreenshotURL()),
+		Access:      HeresphereMember,
+		Title:       scene.GetTitle(),
+		Description: scene.Details,
+		//ThumbnailImage: addApiKey(urlbuilders.NewSceneURLBuilder(manager.GetBaseURL(r), scene).GetScreenshotURL()),
+		ThumbnailImage: addApiKey(fmt.Sprintf("%s/heresphere/%d/screenshot",
+			manager.GetBaseURL(r),
+			scene.ID,
+		)),
 		ThumbnailVideo: addApiKey(urlbuilders.NewSceneURLBuilder(manager.GetBaseURL(r), scene).GetStreamPreviewURL()),
 		DateAdded:      scene.CreatedAt.Format("2006-01-02"),
 		Duration:       0.0,
@@ -408,12 +515,14 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	rs.getScreenshot(r.Context(), scene)
+
 	// Create a JSON encoder for the response writer
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(processedScene); err != nil {
-		logger.Errorf("Heresphere HeresphereVideoData encode error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereVideoData encode error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -449,7 +558,7 @@ func (rs routes) heresphereLoginToken(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(auth); err != nil {
-		logger.Errorf("Heresphere HeresphereLoginToken encode error: %s\n", err.Error())
+		logger.Errorf("Heresphere HeresphereLoginToken encode error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

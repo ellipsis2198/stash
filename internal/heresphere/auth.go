@@ -94,7 +94,7 @@ func writeNotAuthorized(w http.ResponseWriter, r *http.Request, msg string) {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(idx); err != nil {
-		logger.Errorf("Heresphere writeNotAuthorized error: %s\n", err.Error())
+		logger.Errorf("Heresphere writeNotAuthorized error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

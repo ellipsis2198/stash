@@ -36,7 +36,7 @@ func (rs routes) getVideoTags(ctx context.Context, scene *models.Scene) []Heresp
 
 		return err
 	}); err != nil {
-		logger.Errorf("Heresphere getVideoTags generate tags error: %s\n", err.Error())
+		logger.Errorf("Heresphere getVideoTags generate tags error: %v\n", err)
 	}
 
 	return processedTags
@@ -47,7 +47,7 @@ func (rs routes) generateMarkerTags(ctx context.Context, scene *models.Scene) []
 
 	markIDs, err := rs.SceneMarkerFinder.FindBySceneID(ctx, scene.ID)
 	if err != nil {
-		logger.Errorf("Heresphere generateMarkerTags SceneMarker.FindBySceneID error: %s\n", err.Error())
+		logger.Errorf("Heresphere generateMarkerTags SceneMarker.FindBySceneID error: %v\n", err)
 		return tags
 	}
 
@@ -77,7 +77,7 @@ func (rs routes) generateTagTags(ctx context.Context, scene *models.Scene) []Her
 
 	tagIDs, err := rs.TagFinder.FindBySceneID(ctx, scene.ID)
 	if err != nil {
-		logger.Errorf("Heresphere generateTagTags Tag.FindBySceneID error: %s\n", err.Error())
+		logger.Errorf("Heresphere generateTagTags Tag.FindBySceneID error: %v\n", err)
 		return tags
 	}
 
@@ -96,7 +96,7 @@ func (rs routes) generatePerformerTags(ctx context.Context, scene *models.Scene)
 
 	perfIDs, err := rs.PerformerFinder.FindBySceneID(ctx, scene.ID)
 	if err != nil {
-		logger.Errorf("Heresphere generatePerformerTags Performer.FindBySceneID error: %s\n", err.Error())
+		logger.Errorf("Heresphere generatePerformerTags Performer.FindBySceneID error: %v\n", err)
 		return tags
 	}
 
@@ -122,7 +122,7 @@ func (rs routes) generateGalleryTags(ctx context.Context, scene *models.Scene) [
 	if scene.GalleryIDs.Loaded() {
 		galleries, err := rs.GalleryFinder.FindMany(ctx, scene.GalleryIDs.List())
 		if err != nil {
-			logger.Errorf("Heresphere generateGalleryTags Gallery.FindMany error: %s\n", err.Error())
+			logger.Errorf("Heresphere generateGalleryTags Gallery.FindMany error: %v\n", err)
 			return tags
 		}
 
@@ -149,7 +149,7 @@ func (rs routes) generateMovieTags(ctx context.Context, scene *models.Scene) []H
 
 		movies, err := rs.MovieFinder.FindMany(ctx, idx)
 		if err != nil {
-			logger.Errorf("Heresphere generateMovieTags Movie.FindMany error: %s\n", err.Error())
+			logger.Errorf("Heresphere generateMovieTags Movie.FindMany error: %v\n", err)
 			return tags
 		}
 
@@ -170,7 +170,7 @@ func (rs routes) generateStudioTag(ctx context.Context, scene *models.Scene) []H
 	if scene.StudioID != nil {
 		studio, err := rs.StudioFinder.Find(ctx, *scene.StudioID)
 		if err != nil {
-			logger.Errorf("Heresphere generateStudioTag Studio.Find error: %s\n", err.Error())
+			logger.Errorf("Heresphere generateStudioTag Studio.Find error: %v\n", err)
 			return tags
 		}
 

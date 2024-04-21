@@ -73,7 +73,7 @@ func (rs routes) getVideoSubtitles(r *http.Request, scene *models.Scene) []Heres
 		}()
 
 		if err != nil {
-			logger.Errorf("Heresphere getVideoSubtitles error: %s\n", err.Error())
+			logger.Errorf("Heresphere getVideoSubtitles error: %v\n", err)
 			return processedSubtitles
 		}
 
@@ -141,7 +141,7 @@ func (rs routes) getVideoMedia(r *http.Request, scene *models.Scene) []Herespher
 	if err := txn.WithTxn(r.Context(), rs.TxnManager, func(ctx context.Context) error {
 		return scene.LoadPrimaryFile(ctx, rs.FileFinder)
 	}); err != nil {
-		logger.Errorf("Heresphere getVideoMedia error: %s\n", err.Error())
+		logger.Errorf("Heresphere getVideoMedia error: %v\n", err)
 		return processedMedia
 	}
 

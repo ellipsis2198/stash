@@ -83,7 +83,7 @@ func (rs routes) handleAddTag(ctx context.Context, tag HeresphereVideoTag, tagID
 		tagMod, err = rs.TagFinder.FindByName(ctx, after, true)
 		return err
 	}); err != nil {
-		fmt.Printf("Heresphere handleTags Tag.FindByName error: %s\n", err.Error())
+		fmt.Printf("Heresphere handleTags Tag.FindByName error: %v\n", err)
 		tagMod = nil
 	}
 
@@ -111,7 +111,7 @@ func (rs routes) handleAddPerformer(ctx context.Context, tag HeresphereVideoTag,
 
 		return err
 	}); err != nil {
-		fmt.Printf("Heresphere handleTags Performer.FindByNames error: %s\n", err.Error())
+		fmt.Printf("Heresphere handleTags Performer.FindByNames error: %v\n", err)
 		tagMod = nil
 	}
 
@@ -148,7 +148,7 @@ func (rs routes) handleAddMarker(ctx context.Context, tag HeresphereVideoTag, sc
 
 		return err
 	}); err != nil {
-		logger.Errorf("Heresphere handleAddMarker withReadTxn error: %s\n", err.Error())
+		logger.Errorf("Heresphere handleAddMarker withReadTxn error: %v\n", err)
 		return false
 	}
 
@@ -179,7 +179,7 @@ func (rs routes) handleAddMarker(ctx context.Context, tag HeresphereVideoTag, sc
 		if err := rs.withTxn(ctx, func(ctx context.Context) error {
 			return rs.SceneMarkerFinder.Create(ctx, &newMarker)
 		}); err != nil {
-			logger.Errorf("Heresphere handleTags SceneMarker.Create error: %s\n", err.Error())
+			logger.Errorf("Heresphere handleTags SceneMarker.Create error: %v\n", err)
 		}
 	}
 
