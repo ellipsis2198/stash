@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image"
-	"image/jpeg"
 	"io"
 	"net/http"
 	"os"
@@ -20,12 +18,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/nfnt/resize"
 	"github.com/stashapp/stash/internal/api/urlbuilders"
 	"github.com/stashapp/stash/internal/manager"
 	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/internal/static"
-	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/scene"
@@ -120,78 +116,18 @@ var (
 
 const maxRes = 360
 
-func (rs routes) getScreenshot(ctx context.Context, scene *models.Scene) (cover []byte, err error) {
+func (rs routes) getScreenshot(scene *models.Scene) (cover []byte, err error) {
 	c := config.GetInstance()
 
-	// Ensure dir
-	pth := path.Join(c.GetGeneratedPath(), "hsp_screenshot")
-	if err = fsutil.EnsureDir(pth); err != nil {
-		cover = static.ReadAll(static.DefaultSceneImage)
-		return
-	}
-
 	// Check if exists
-	pth = path.Join(pth, strconv.Itoa(scene.ID))
+	pth := path.Join(c.GetGeneratedPath(), "hsp_screenshot", strconv.Itoa(scene.ID))
 	if _, err = os.Stat(pth); !os.IsNotExist(err) {
 		cover, err = os.ReadFile(pth)
 		return
 	}
 
-	// Get cover
-	if err = rs.withTxn(ctx, func(ctx context.Context) error {
-		cover, err = rs.SceneCoverGetter.GetCover(ctx, scene.ID)
-		return err
-	}); err != nil {
-		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
-		return
-	}
-
 	// Get default if needed
-	if cover == nil {
-		cover = static.ReadAll(static.DefaultSceneImage)
-		return
-	}
-
-	// Decode the image
-	img, _, err := image.Decode(bytes.NewReader(cover))
-	if err != nil {
-		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
-		return
-	}
-
-	// Get the dimensions of the original image
-	originalWidth := img.Bounds().Max.X
-	originalHeight := img.Bounds().Max.Y
-
-	// Calculate the scaling factor to fit within 360 pixels
-	var scaleFactor float64
-	if originalWidth > originalHeight {
-		scaleFactor = maxRes / float64(originalWidth)
-	} else {
-		scaleFactor = maxRes / float64(originalHeight)
-	}
-
-	// Resize the image
-	newWidth := uint(float64(originalWidth) * scaleFactor)
-	newHeight := uint(float64(originalHeight) * scaleFactor)
-	resizedImg := resize.Resize(newWidth, newHeight, img, resize.NearestNeighbor)
-
-	// Encode the resized image to JPEG format (change to PNG if needed)
-	var resizedImageBuf bytes.Buffer
-	if err = jpeg.Encode(&resizedImageBuf, resizedImg, nil); err != nil {
-		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
-		return
-	}
-
-	// Set output
-	cover = resizedImageBuf.Bytes()
-
-	// Write cache
-	if err = os.WriteFile(pth, cover, 0600); err != nil {
-		logger.Errorf("Heresphere getScreenshot error: %v\n", err)
-		return
-	}
-
+	cover = static.ReadAll(static.DefaultSceneImage)
 	return
 }
 
@@ -199,7 +135,7 @@ func (rs routes) heresphereScreenshot(w http.ResponseWriter, r *http.Request) {
 	// Get the scene from the request context
 	scene := r.Context().Value(sceneKey).(*models.Scene)
 
-	resizedImageBuf, err := rs.getScreenshot(r.Context(), scene)
+	resizedImageBuf, err := rs.getScreenshot(scene)
 	if err != nil {
 		logger.Errorf("Heresphere heresphereScreenshot error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -514,8 +450,6 @@ func (rs routes) heresphereVideoData(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
-	rs.getScreenshot(r.Context(), scene)
 
 	// Create a JSON encoder for the response writer
 	w.Header().Set("Content-Type", "application/json")
