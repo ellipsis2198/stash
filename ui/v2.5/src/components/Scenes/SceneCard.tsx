@@ -369,7 +369,7 @@ const SceneCardImage = PatchComponent(
             <span className="overlay-resolution">
               {" "}
               {TextUtils.resolution(file?.width, file?.height)}
-              {Math.round(file?.frame_rate).toFixed(0)}
+              {Math.round(file?.frame_rate)}
             </span>
           ) : (
             ""
