@@ -27,7 +27,7 @@ func (t *GenerateHspScreenshotTask) GetDescription() string {
 	return fmt.Sprintf("Generating hsp screenshot for %s", t.Scene.Path)
 }
 
-const maxRes = 360
+const maxRes = 480
 
 func (t *GenerateHspScreenshotTask) Start(ctx context.Context) {
 	if !t.required() {
