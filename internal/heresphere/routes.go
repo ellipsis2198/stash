@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"os"
@@ -18,10 +20,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nfnt/resize"
+	"github.com/remeh/sizedwaitgroup"
 	"github.com/stashapp/stash/internal/api/urlbuilders"
 	"github.com/stashapp/stash/internal/manager"
 	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/internal/static"
+	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/scene"
@@ -274,6 +279,76 @@ func (rs routes) heresphereVideoDataUpdate(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
+func (rs routes) genThumbnail(ctx context.Context, sceneID int) error {
+	c := config.GetInstance()
+
+	// Make dir
+	if err := fsutil.EnsureDir(path.Join(c.GetGeneratedPath(), "hsp_screenshot")); err != nil {
+		return err
+	}
+
+	// Skip if exists
+	thumbnailPath := path.Join(c.GetGeneratedPath(), "hsp_screenshot", strconv.Itoa(sceneID))
+	_, err := os.Stat(thumbnailPath)
+	if !os.IsNotExist(err) {
+		return err
+	}
+
+	var cover []byte
+
+	// Get cover
+	if err := rs.withTxn(ctx, func(ctx context.Context) error {
+		cover, err = rs.SceneFinder.GetCover(ctx, sceneID)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	// Stop if none
+	if cover == nil {
+		return errors.New("no existing cover")
+	}
+
+	// Decode the image
+	img, _, err := image.Decode(bytes.NewReader(cover))
+	if err != nil {
+		return err
+	}
+
+	// Get the dimensions of the original image
+	originalWidth := img.Bounds().Max.X
+	originalHeight := img.Bounds().Max.Y
+
+	// Calculate the scaling factor to fit within 360 pixels
+	var scaleFactor float64
+	if originalWidth > originalHeight {
+		scaleFactor = maxRes / float64(originalWidth)
+	} else {
+		scaleFactor = maxRes / float64(originalHeight)
+	}
+
+	// Resize the image
+	newWidth := uint(float64(originalWidth) * scaleFactor)
+	newHeight := uint(float64(originalHeight) * scaleFactor)
+	resizedImg := resize.Resize(newWidth, newHeight, img, resize.NearestNeighbor)
+
+	// Encode the resized image to JPEG format (change to PNG if needed)
+	var resizedImageBuf bytes.Buffer
+	if err = jpeg.Encode(&resizedImageBuf, resizedImg, nil); err != nil {
+		return err
+	}
+
+	// Set output
+	cover = resizedImageBuf.Bytes()
+
+	// Write cache
+	if err = os.WriteFile(thumbnailPath, cover, 0600); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 /*
  * This endpoint provides the main libraries that are available to browse.
  */
@@ -301,12 +376,23 @@ func (rs routes) heresphereIndex(w http.ResponseWriter, r *http.Request) {
 
 		sort.Strings(keys)
 
+		parallelTasks := config.GetInstance().GetParallelTasksWithAutoDetection()
+		wg := sizedwaitgroup.New(parallelTasks)
 		for _, key := range keys {
 			value := parsedFilters[key]
 			sceneUrls := make([]string, len(value))
 
 			for idx, sceneID := range value {
 				sceneUrls[idx] = addApiKey(fmt.Sprintf("%s/heresphere/%d", manager.GetBaseURL(r), sceneID))
+				{
+					wg.Add()
+					go func() {
+						if err := rs.genThumbnail(r.Context(), sceneID); err != nil {
+							logger.Error(err.Error())
+						}
+						wg.Done()
+					}()
+				}
 			}
 
 			libraryObj.Library = append(libraryObj.Library, HeresphereIndexEntry{

@@ -366,22 +366,6 @@ func (j *GenerateJob) queueSceneJobs(ctx context.Context, g *generate.Generator,
 			j.totals.tasks++
 			queue <- task
 		}
-
-		{
-			config := config.GetInstance()
-
-			task := &GenerateHspScreenshotTask{
-				repository: r,
-				Scene:      *scene,
-				Folder:     config.GetGeneratedPath(),
-				Overwrite:  j.overwrite,
-			}
-
-			if task.required() {
-				j.totals.tasks++
-				queue <- task
-			}
-		}
 	}
 
 	if j.input.Sprites {
