@@ -119,8 +119,6 @@ var (
 	idMap = make(map[string]string)
 )
 
-const maxRes = 360
-
 func (rs routes) getScreenshot(scene *models.Scene) (cover []byte, err error) {
 	c := config.GetInstance()
 
@@ -278,6 +276,8 @@ func (rs routes) heresphereVideoDataUpdate(w http.ResponseWriter, r *http.Reques
 	}
 	return nil
 }
+
+const maxRes = 480
 
 func (rs routes) genThumbnail(ctx context.Context, sceneID int) error {
 	c := config.GetInstance()
