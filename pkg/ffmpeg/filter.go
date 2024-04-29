@@ -19,21 +19,21 @@ func (f VideoFilter) Args() []string {
 
 // ScaleWidth returns a VideoFilter scaling the width to the given width, maintaining aspect ratio and a height as a multiple of 2.
 func (f VideoFilter) ScaleWidth(w int) VideoFilter {
-	return f.ScaleDimensions(w, -1)
+	return f.ScaleDimensions(w, -2)
 }
 
 func (f VideoFilter) ScaleHeight(h int) VideoFilter {
-	return f.ScaleDimensions(-1, h)
+	return f.ScaleDimensions(-2, h)
 }
 
 // ScaleDimesions returns a VideoFilter scaling using w and h. Use -n to maintain aspect ratio and maintain as multiple of n.
 func (f VideoFilter) ScaleDimensions(w, h int) VideoFilter {
-	return f.Append(fmt.Sprintf("scale_qsv=%v:%v", w, h))
+	return f.Append(fmt.Sprintf("scale=%v:%v", w, h))
 }
 
 // ScaleMaxSize returns a VideoFilter scaling to maxDimensions, maintaining aspect ratio using force_original_aspect_ratio=decrease.
 func (f VideoFilter) ScaleMaxSize(maxDimensions int) VideoFilter {
-	return f.Append(fmt.Sprintf("scale_qsv=%v:%v:force_original_aspect_ratio=decrease", maxDimensions, maxDimensions))
+	return f.Append(fmt.Sprintf("scale=%v:%v:force_original_aspect_ratio=decrease", maxDimensions, maxDimensions))
 }
 
 // ScaleMax returns a VideoFilter scaling to maxSize. It will scale width if it is larger than height, otherwise it will scale height.
@@ -53,10 +53,10 @@ func (f VideoFilter) ScaleMax(inputWidth, inputHeight, maxSize int) VideoFilter 
 	// we'll set the smaller dimesion
 	if inputWidth > inputHeight {
 		// set the height
-		return f.ScaleDimensions(-1, maxSize)
+		return f.ScaleDimensions(-2, maxSize)
 	}
 
-	return f.ScaleDimensions(maxSize, -1)
+	return f.ScaleDimensions(maxSize, -2)
 }
 
 // ScaleMaxLM returns a VideoFilter scaling to maxSize with respect to a max size.
@@ -77,10 +77,10 @@ func (f VideoFilter) ScaleMaxLM(width int, height int, reqHeight int, maxWidth i
 	if desiredHeight > maxHeight || desiredWidth > maxWidth {
 		if desiredHeight-maxHeight > desiredWidth-maxWidth {
 			// scale the height down to the maximum height
-			return f.ScaleDimensions(-1, maxHeight)
+			return f.ScaleDimensions(-2, maxHeight)
 		} else {
 			// scale the width down to the maximum width
-			return f.ScaleDimensions(maxWidth, -1)
+			return f.ScaleDimensions(maxWidth, -2)
 		}
 	}
 

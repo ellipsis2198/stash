@@ -180,6 +180,7 @@ func (g Generator) previewVideoChunk(lockCtx *fsutil.LockContext, fn string, opt
 	videoArgs = videoArgs.VideoFilter(videoFilter)
 
 	videoArgs = append(videoArgs,
+		"-pix_fmt", "yuv420p",
 		"-profile:v", "high",
 		"-level", "4.2",
 		"-preset", options.Preset,
