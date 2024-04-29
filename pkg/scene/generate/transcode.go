@@ -74,6 +74,7 @@ func (g Generator) transcode(input string, options TranscodeOptions) generateFn 
 		}
 
 		videoArgs = append(videoArgs,
+			"-pix_fmt", "yuv420p",
 			"-profile:v", "high",
 			"-level", "4.2",
 			"-preset", "superfast",
@@ -82,7 +83,7 @@ func (g Generator) transcode(input string, options TranscodeOptions) generateFn 
 
 		args := transcoder.Transcode(input, transcoder.TranscodeOptions{
 			OutputPath: tmpFn,
-			VideoCodec: ffmpeg.VideoCodecI264,
+			VideoCodec: ffmpeg.VideoCodecLibX264,
 			VideoArgs:  videoArgs,
 			AudioCodec: ffmpeg.AudioCodecAAC,
 
@@ -104,6 +105,7 @@ func (g Generator) transcodeVideo(input string, options TranscodeOptions) genera
 		}
 
 		videoArgs = append(videoArgs,
+			"-pix_fmt", "yuv420p",
 			"-profile:v", "high",
 			"-level", "4.2",
 			"-preset", "superfast",
@@ -115,7 +117,7 @@ func (g Generator) transcodeVideo(input string, options TranscodeOptions) genera
 
 		args := transcoder.Transcode(input, transcoder.TranscodeOptions{
 			OutputPath: tmpFn,
-			VideoCodec: ffmpeg.VideoCodecI264,
+			VideoCodec: ffmpeg.VideoCodecLibX264,
 			VideoArgs:  videoArgs,
 			AudioArgs:  audioArgs,
 
