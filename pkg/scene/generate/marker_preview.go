@@ -57,7 +57,6 @@ func (g Generator) markerPreviewVideo(input string, options sceneMarkerOptions) 
 		videoArgs = videoArgs.VideoFilter(videoFilter)
 
 		videoArgs = append(videoArgs,
-			"-pix_fmt", "yuv420p",
 			"-profile:v", "high",
 			"-level", "4.2",
 			"-preset", "veryslow",
@@ -72,7 +71,7 @@ func (g Generator) markerPreviewVideo(input string, options sceneMarkerOptions) 
 			Duration:   markerPreviewDuration,
 			StartTime:  float64(options.Seconds),
 			OutputPath: tmpFn,
-			VideoCodec: ffmpeg.VideoCodecLibX264,
+			VideoCodec: ffmpeg.VideoCodecI264,
 			VideoArgs:  videoArgs,
 		}
 

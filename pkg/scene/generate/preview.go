@@ -200,7 +200,7 @@ func (g Generator) previewVideoChunk(lockCtx *fsutil.LockContext, fn string, opt
 		XError:   !fallback,
 		SlowSeek: fallback,
 
-		VideoCodec: ffmpeg.VideoCodecLibX264,
+		VideoCodec: ffmpeg.VideoCodecI264,
 		VideoArgs:  videoArgs,
 
 		ExtraInputArgs:  g.FFMpegConfig.GetTranscodeInputArgs(),

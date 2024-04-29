@@ -28,12 +28,21 @@ func (f VideoFilter) ScaleHeight(h int) VideoFilter {
 
 // ScaleDimesions returns a VideoFilter scaling using w and h. Use -n to maintain aspect ratio and maintain as multiple of n.
 func (f VideoFilter) ScaleDimensions(w, h int) VideoFilter {
-	return f.Append(fmt.Sprintf("scale_qsv=%v:%v", w, h))
+	prefix := "scale"
+	if Hardware != "" {
+		prefix = prefix + "_" + Hardware
+	}
+		
+	return f.Append(fmt.Sprintf("%s=%v:%v", prefix, w, h))
 }
 
 // ScaleMaxSize returns a VideoFilter scaling to maxDimensions, maintaining aspect ratio using force_original_aspect_ratio=decrease.
 func (f VideoFilter) ScaleMaxSize(maxDimensions int) VideoFilter {
-	return f.Append(fmt.Sprintf("scale_qsv=%v:%v:force_original_aspect_ratio=decrease", maxDimensions, maxDimensions))
+	prefix := "scale"                                                                                                                                                                                                if Hardware != "" {
+                prefix = prefix + "_" + Hardware
+        }
+
+	return f.Append(fmt.Sprintf("%s=%v:%v:force_original_aspect_ratio=decrease", prefix, maxDimensions, maxDimensions))
 }
 
 // ScaleMax returns a VideoFilter scaling to maxSize. It will scale width if it is larger than height, otherwise it will scale height.
